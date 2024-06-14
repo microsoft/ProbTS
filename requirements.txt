@@ -8,7 +8,7 @@ gluonts==0.13.1
 numpy==1.23.5
 typeshed-client==2.3.0
 docstring-parser==0.15
-orjson==3.9.0
+orjson==3.9.15
 einops==0.6.1
 pydantic==1.10.8
 linear-attention-transformer==0.19.1
