@@ -1,0 +1,21 @@
+numpy==1.23.5
+pandas
+einops
+matplotlib
+tqdm
+lightning @ https://github.com/Lightning-AI/lightning/archive/refs/heads/master.zip
+gluonts==0.13.1
+numpy==1.23.5
+typeshed-client==2.3.0
+docstring-parser==0.15
+orjson==3.9.0
+einops==0.6.1
+pydantic==1.10.8
+linear-attention-transformer==0.19.1
+ray==2.8.1
+tensorboardx==2.6.2
+pyarrow==11.0.0
+protobuf==3.20
+jsonargparse[signatures]==4.27.7
+opt_einsum
+psutil
