@@ -10,7 +10,7 @@ typeshed-client==2.3.0
 docstring-parser==0.15
 orjson==3.9.0
 einops==0.6.1
-pydantic==1.10.8
+pydantic==1.10.13
 linear-attention-transformer==0.19.1
 ray==2.8.1
 tensorboardx==2.6.2
