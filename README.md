@@ -131,7 +131,7 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
 
 - **Long-Term Forecasting**: To download the [long-term forecasting datasets](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy), please follow these steps:
     ```bash
-    bash scripts/prepare_datasets.sh "/path/to/dataset/folder/"
+    bash scripts/prepare_datasets.sh "./datasets"
     ```
 
     Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}` with the following list of available datasets:
