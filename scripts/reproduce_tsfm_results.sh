@@ -22,11 +22,11 @@ LOG_DIR=./exps
 # if not specify dataset_path, the default path is ./datasets
 
 # MOIRAI
-MODEL = 'moirai'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'
-    for CTX_LEN in 5000 96
-        for PRED_LEN in 24 48 96 192 336 720
-            for variate_mode in 'M' 'S'
+MODEL='moirai'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'; do
+    for CTX_LEN in 5000 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
+            for variate_mode in 'M' 'S'; do
                 python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                     --data.data_manager.init_args.path ${DATA_DIR} \
                     --trainer.default_root_dir ${LOG_DIR} \
@@ -34,13 +34,17 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'
                     --data.data_manager.init_args.dataset ${DATASET} \
                     --data.data_manager.init_args.context_length ${CTX_LEN} \
                     --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                    --model.encoder.init_args.variate_mode ${variate_mode} \
-                    --data.test_batch_size 64 \
+                    --model.forecaster.init_args.variate_mode ${variate_mode} \
+                    --data.test_batch_size 32
+            done
+        done
+    done
+done
 
-for DATASET in 'exchange_rate_nips' 'solar_nips' 'electricity_nips'
-    for CTX_LEN in 5000 96
-        for PRED_LEN in 24
-            for variate_mode in 'M' 'S'
+for DATASET in 'exchange_rate_nips' 'solar_nips' 'electricity_nips'; do
+    for CTX_LEN in 5000 96; do
+        for PRED_LEN in 24; do
+            for variate_mode in 'M' 'S'; do
                 python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                     --data.data_manager.init_args.path ${DATA_DIR} \
                     --trainer.default_root_dir ${LOG_DIR} \
@@ -48,14 +52,18 @@ for DATASET in 'exchange_rate_nips' 'solar_nips' 'electricity_nips'
                     --data.data_manager.init_args.dataset ${DATASET} \
                     --data.data_manager.init_args.context_length ${CTX_LEN} \
                     --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                    --model.encoder.init_args.variate_mode ${variate_mode} \
-                    --data.test_batch_size 64 \
+                    --model.forecaster.init_args.variate_mode ${variate_mode} \
+                    --data.test_batch_size 32
+            done
+        done
+    done
+done
 
 # Chronos
-MODEL = 'chronos'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
-    for CTX_LEN in 5000 96
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='chronos'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'; do
+    for CTX_LEN in 5000 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -63,11 +71,14 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 1 \
+                --data.test_batch_size 1
+        done
+    done
+done
 
-for DATASET in 'exchange_rate_nips' 'traffic_nips'
-    for CTX_LEN in 512 96
-        for PRED_LEN in 24
+for DATASET in 'exchange_rate_nips' 'traffic_nips'; do
+    for CTX_LEN in 512 96; do
+        for PRED_LEN in 24; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -75,13 +86,16 @@ for DATASET in 'exchange_rate_nips' 'traffic_nips'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 1 \
+                --data.test_batch_size 1
+        done
+    done
+done
 
 # Lag-Llama
-MODEL = 'lag_llama'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
-    for CTX_LEN in 512
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='lag_llama'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'; do
+    for CTX_LEN in 512; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -89,13 +103,17 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 1 \
+                --model.forecaster.init_args.ckpt_path './checkpoints/lag-llama/lag-llama.ckpt' \
+                --data.test_batch_size 1
+        done
+    done
+done
 
 # TimesFM
-MODEL = 'timesfm'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'
-    for CTX_LEN in 96
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='timesfm'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'; do
+    for CTX_LEN in 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -103,13 +121,16 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 64 \
+                --data.test_batch_size 64
+        done
+    done
+done
 
 # Timer
-MODEL = 'timer'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'
-    for CTX_LEN in 96
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='timer'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'; do
+    for CTX_LEN in 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -117,13 +138,17 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 64 \
+                --model.forecaster.init_args.ckpt_path './checkpoints/timer/Timer_67M_UTSD_4G.pt' \
+                --data.test_batch_size 64
+        done
+    done
+done
 
 # UniTS
-MODEL = 'units'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'
-    for CTX_LEN in 96
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='units'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'; do
+    for CTX_LEN in 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -131,13 +156,17 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 64 \
+                --model.forecaster.init_args.ckpt_path './checkpoints/units/units_x128_pretrain_checkpoint.pth' \
+                --data.test_batch_size 64
+        done
+    done
+done
 
 # ForecastPFN
-MODEL = 'forecastpfn'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
-    for CTX_LEN in 96
-        for PRED_LEN in 24 48 96 192 336 720
+MODEL='forecastpfn'
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'; do
+    for CTX_LEN in 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
             python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
                 --data.data_manager.init_args.path ${DATA_DIR} \
                 --trainer.default_root_dir ${LOG_DIR} \
@@ -145,4 +174,8 @@ for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf'
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length ${CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                --data.test_batch_size 64 \
+                --model.forecaster.init_args.ckpt_path './checkpoints/ForecastPFN/saved_weights' \
+                --data.test_batch_size 64
+        done
+    done
+done
