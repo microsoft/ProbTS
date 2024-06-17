@@ -1,2 +1,5 @@
+# Ignore all files
 *
-!.gitignore
+
+# Except README.md
+!README.md

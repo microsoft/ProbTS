@@ -36,7 +36,8 @@ dependencies = [
     "jsonargparse[signatures]==4.27.7",
     "opt_einsum",
     "psutil",
-    "reformer-pytorch"
+    "reformer-pytorch",
+    "gdown",
 ]
 
 [project.optional-dependencies]

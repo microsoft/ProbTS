@@ -22,7 +22,7 @@ data:
     init_args:
       dataset: solar_nips
       split_val: true
-      scaler: identity # identity, standard, temporal
+      scaler: standard # identity, standard, temporal
   batch_size: 1
   test_batch_size: 1
   num_workers: 8

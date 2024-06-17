@@ -23,9 +23,8 @@ class Chronos(Forecaster):
     ):
         super().__init__(**kwargs)
         
-        # debug
-        model_size = 'small'
         self.pred_len = kwargs.get('prediction_length')
+        print(self.context_length, self.pred_len)
 
         # Load pretrained model
         self.no_training = True
