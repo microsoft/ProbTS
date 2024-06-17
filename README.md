@@ -129,9 +129,10 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
     ['tourism_monthly', 'tourism_quarterly', 'tourism_yearly', 'm4_hourly', 'm4_daily', 'm4_weekly', 'm4_monthly', 'm4_quarterly', 'm4_yearly', 'm5']
     ```
 
-- **Long-Term Forecasting**: To set up the long-term forecasting datasets, please follow these steps:
-    1. Download long-term forecasting datasets from [HERE](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy) and place them in `./dataset`. 
-    2. [Opt.] Download CAISO and NordPool datasets from [DEPTS](https://github.com/weifantt/DEPTS/tree/main) and place them in ```./dataset```. 
+- **Long-Term Forecasting**: To download the [long-term forecasting datasets](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy), please follow these steps:
+    ```bash
+    bash scripts/prepare_datasets.sh "/path/to/dataset/folder/"
+    ```
 
     Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}` with the following list of available datasets:
     ```bash
@@ -149,24 +150,40 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
 
 Download the checkpoints with the following command (details can be found [here](./checkpoints/README.md)):
 ```bash
-sh scripts/prepare_checkpoints.sh # By downloading, you agree to the original licenses
+bash scripts/prepare_checkpoints.sh # By downloading, you agree to the original licenses
 ```
 
 ## Quick Start :rocket:
 
 Specify `--config` with a specific configuration file to reproduce results of point or probabilistic models on commonly used long- and short-term forecasting datasets. Configuration files are included in the [config](./config/) folder.
 
-To run non-universal models:
+To run models:
 ```bash 
 bash run.sh
 ```
 
-To run foundation models:
-```bash 
-bash run_tsfm.sh
-```
+Experimental results reproduction:
 
-### Short-term Forecasting
+- **Long-term Forecasting:**
+
+    ```bash 
+    bash scripts/reproduce_ltsf_results.sh
+    ```
+
+
+- **Short-term Forecasting:**
+
+    ```bash 
+    bash scripts/reproduce_stsf_results.sh
+    ```
+
+- **Time Series Foundation Models:**
+
+    ```bash 
+    bash scripts/reproduce_tsfm_results.sh
+    ```
+
+### Short-term Forecasting Configuration
 
 For short-term forecasting scenarios, datasets and corresponding `context_length` and `prediction_length` are automatically obtained from [GluonTS](https://github.com/awslabs/gluonts). Use the following command:
 
@@ -182,7 +199,7 @@ from gluonts.dataset.repository import dataset_names
 print(dataset_names)
 ```
 
-### Long-term Forecasting
+### Long-term Forecasting Configuration
 
 For long-term forecasting scenarios, `context_length` and `prediction_length` must be explicitly assigned:
 

@@ -20,7 +20,7 @@ LOG_DIR=/path/to/log_dir
 # --data.data_manager.init_args.prediction_length 192 \
 
 # run pipeline with train and test
-# replace ${MODEL} with tarfet model name, e.g, GRU_NVP
+# replace ${MODEL} with tarfet model name, e.g, patchtst
 # replace ${DATASET} with dataset name
 
 # if not specify dataset_path, the default path is ./datasets
