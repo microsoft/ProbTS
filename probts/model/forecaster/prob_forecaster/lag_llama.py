@@ -21,7 +21,7 @@ class LagLlama(Forecaster):
     def __init__(
         self,
         use_rope_scaling: bool = True,
-        ckpt_path: str = '/data/Blob_EastUS/v-zhenwzhang/TsFM_checkpoints/lagllama/lag-llama.ckpt',
+        ckpt_path: str = None,
         **kwargs
     ):
         super().__init__(**kwargs)
