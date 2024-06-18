@@ -23,38 +23,24 @@ LOG_DIR=./exps
 
 # MOIRAI
 MODEL='moirai'
-for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'; do
-    for CTX_LEN in 5000 96; do
-        for PRED_LEN in 24 48 96 192 336 720; do
-            for variate_mode in 'M' 'S'; do
-                python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
-                    --data.data_manager.init_args.path ${DATA_DIR} \
-                    --trainer.default_root_dir ${LOG_DIR} \
-                    --data.data_manager.init_args.split_val true \
-                    --data.data_manager.init_args.dataset ${DATASET} \
-                    --data.data_manager.init_args.context_length ${CTX_LEN} \
-                    --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                    --model.forecaster.init_args.variate_mode ${variate_mode} \
-                    --data.test_batch_size 32
-            done
-        done
-    done
-done
 
 for DATASET in 'exchange_rate_nips' 'solar_nips' 'electricity_nips'; do
     for CTX_LEN in 5000 96; do
-        for PRED_LEN in 24; do
-            for variate_mode in 'M' 'S'; do
-                python run.py --config config/tsfm/${MODEL}.yaml --seed_everything 0  \
-                    --data.data_manager.init_args.path ${DATA_DIR} \
-                    --trainer.default_root_dir ${LOG_DIR} \
-                    --data.data_manager.init_args.split_val true \
-                    --data.data_manager.init_args.dataset ${DATASET} \
-                    --data.data_manager.init_args.context_length ${CTX_LEN} \
-                    --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-                    --model.forecaster.init_args.variate_mode ${variate_mode} \
-                    --data.test_batch_size 32
-            done
+        python run.py --config config/tsfm/${MODEL}/context_${CTX_LEN}/${DATASET}.yaml --seed_everything 0  \
+            --data.data_manager.init_args.path ${DATA_DIR} \
+            --trainer.default_root_dir ${LOG_DIR} \
+            --data.data_manager.init_args.dataset ${DATASET} 
+    done
+done
+
+for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf'; do
+    for CTX_LEN in 5000 96; do
+        for PRED_LEN in 24 48 96 192 336 720; do
+            python run.py --config config/tsfm/${MODEL}/context_${CTX_LEN}/${DATASET}.yaml --seed_everything 0  \
+                --data.data_manager.init_args.path ${DATA_DIR} \
+                --trainer.default_root_dir ${LOG_DIR} \
+                --data.data_manager.init_args.dataset ${DATASET} \
+                --data.data_manager.init_args.prediction_length ${PRED_LEN}
         done
     done
 done

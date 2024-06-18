@@ -147,7 +147,7 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
 
 Download the checkpoints with the following command (details can be found [here](./checkpoints/README.md)):
 ```bash
-bash scripts/prepare_checkpoints.sh # By downloading, you agree to the original licenses
+bash scripts/prepare_tsfm_checkpoints.sh # By downloading, you agree to the original licenses
 ```
 
 ## Quick Start :rocket:
