@@ -81,8 +81,11 @@ class ProbTSForecastModule(pl.LightningModule):
 
     def evaluate(self, batch, stage=''):
         batch_data = ProbTSBatchData(batch, self.device)
-        self.batch_size.append(batch_data.past_target_cdf.shape[0])
-        past_data = batch_data.past_target_cdf
+        orin_past_data = batch_data.past_target_cdf[:]
+        orin_future_data = batch_data.future_target_cdf[:]
+        norm_past_data = self.scaler.transform(batch_data.past_target_cdf)
+        norm_future_data = self.scaler.transform(batch_data.future_target_cdf)
+        self.batch_size.append(orin_past_data.shape[0])
         
         # Forecast
         batch_data.past_target_cdf = self.scaler.transform(batch_data.past_target_cdf)
@@ -90,12 +93,11 @@ class ProbTSForecastModule(pl.LightningModule):
         
         # Calculate denorm metrics
         denorm_forecasts = self.scaler.inverse_transform(forecasts)
-        metrics = self.evaluator(batch_data.future_target_cdf, denorm_forecasts, past_data=past_data, freq=self.forecaster.freq)
+        metrics = self.evaluator(orin_future_data, denorm_forecasts, past_data=orin_past_data, freq=self.forecaster.freq)
         self.update_metrics(metrics, stage)
         
         # Calculate norm metrics
-        norm_future_target_cdf = self.scaler.transform(batch_data.future_target_cdf)
-        norm_metrics = self.evaluator(norm_future_target_cdf, forecasts, past_data=batch_data.past_target_cdf, freq=self.forecaster.freq)
+        norm_metrics = self.evaluator(norm_future_data, forecasts, past_data=norm_past_data, freq=self.forecaster.freq)
         self.update_metrics(norm_metrics, stage, 'norm')
         return metrics
 

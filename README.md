@@ -82,9 +82,6 @@ pip uninstall -y probts # recommended to uninstall the root package (optional)
 conda create -n probts_fm python=3.10
 conda activate probts_fm
 
-# Install required packages
-pip install .
-
 # Git submodule
 git submodule update --init --recursive
 

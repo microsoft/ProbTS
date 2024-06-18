@@ -17,7 +17,7 @@ class Evaluator:
     def coverage_name(self, q):
         return f"Coverage[{q}]"
 
-    def get_metrics(self, targets, forecasts, median_fcst=None, seasonal_error=None, samples_dim=0):
+    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=0):
         mean_forecasts = forecasts.mean(axis=samples_dim)
         median_forecasts = np.quantile(forecasts, 0.5, axis=samples_dim)
         metrics = {
@@ -29,8 +29,8 @@ class Evaluator:
             "sMAPE": smape(targets, median_forecasts),
         }
         
-        if median_fcst is not None and seasonal_error is not None:
-            metrics["MASE"] = mase(targets, median_fcst, seasonal_error)
+        if seasonal_error is not None:
+            metrics["MASE"] = mase(targets, median_forecasts, seasonal_error)
         
         metrics["RMSE"] = np.sqrt(metrics["MSE"])
         metrics["NRMSE"] = metrics["RMSE"] / metrics["abs_target_mean"]
@@ -60,7 +60,7 @@ class Evaluator:
 
     @property
     def selected_metrics(self):
-        return ["CRPS", "ND", "NRMSE", "MSE","MASE"]
+        return ["CRPS", "ND", "NRMSE", "MSE", "MASE"]
 
     def __call__(self, targets, forecasts, past_data, freq):
         """
@@ -83,10 +83,9 @@ class Evaluator:
             targets = np.ma.masked_invalid(targets)
             forecasts = np.ma.masked_invalid(forecasts)
         
-        median_fcst = np.quantile(forecasts, 0.5, axis=1)
         seasonal_error = calculate_seasonal_error(past_data, freq)
         
-        metrics = self.get_metrics(targets, forecasts,median_fcst=median_fcst, seasonal_error=seasonal_error, samples_dim=1)
+        metrics = self.get_metrics(targets, forecasts, seasonal_error=seasonal_error, samples_dim=1)
         metrics_sum = self.get_metrics(targets.sum(axis=-1), forecasts.sum(axis=-1), samples_dim=1)
         
         # select output metrics
