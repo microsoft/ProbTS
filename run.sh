@@ -29,6 +29,7 @@ python run.py --config config/ltsf/${DATASET}/${MODEL}.yaml --seed_everything 0 
     --data.data_manager.init_args.path ${DATA_DIR} \
     --trainer.default_root_dir ${LOG_DIR} \
     --data.data_manager.init_args.split_val true \
+    --trainer.max_epochs 50 \
     --data.data_manager.init_args.dataset ${DATASET} \
     --data.data_manager.init_args.context_length ${CTX_LEN} \
     --data.data_manager.init_args.prediction_length ${PRED_LEN} 

@@ -17,7 +17,7 @@ class Evaluator:
     def coverage_name(self, q):
         return f"Coverage[{q}]"
 
-    def get_metrics(self, targets, forecasts, samples_dim=0):
+    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=0):
         mean_forecasts = forecasts.mean(axis=samples_dim)
         median_forecasts = np.quantile(forecasts, 0.5, axis=samples_dim)
         metrics = {
@@ -28,6 +28,9 @@ class Evaluator:
             "MAPE": mape(targets, median_forecasts),
             "sMAPE": smape(targets, median_forecasts),
         }
+        
+        if seasonal_error is not None:
+            metrics["MASE"] = mase(targets, median_forecasts, seasonal_error)
         
         metrics["RMSE"] = np.sqrt(metrics["MSE"])
         metrics["NRMSE"] = metrics["RMSE"] / metrics["abs_target_mean"]
@@ -57,9 +60,9 @@ class Evaluator:
 
     @property
     def selected_metrics(self):
-        return ["CRPS", "ND", "NRMSE", "MSE"]
+        return ["CRPS", "ND", "NRMSE", "MSE", "MASE"]
 
-    def __call__(self, targets, forecasts):
+    def __call__(self, targets, forecasts, past_data, freq):
         """
 
         Parameters
@@ -75,16 +78,21 @@ class Evaluator:
         """
         targets = targets.cpu().detach().numpy()
         forecasts = forecasts.cpu().detach().numpy()
+        past_data = past_data.cpu().detach().numpy()
         if self.ignore_invalid_values:
             targets = np.ma.masked_invalid(targets)
             forecasts = np.ma.masked_invalid(forecasts)
         
-        metrics = self.get_metrics(targets, forecasts, samples_dim=1)
+        seasonal_error = calculate_seasonal_error(past_data, freq)
+        
+        metrics = self.get_metrics(targets, forecasts, seasonal_error=seasonal_error, samples_dim=1)
         metrics_sum = self.get_metrics(targets.sum(axis=-1), forecasts.sum(axis=-1), samples_dim=1)
         
         # select output metrics
         output_metrics = dict()
         for k in self.selected_metrics:
             output_metrics[k] = metrics[k]
-            output_metrics[f"{k}-Sum"] = metrics_sum[k]
+            if k in metrics_sum:
+                output_metrics[f"{k}-Sum"] = metrics_sum[k]
+        
         return output_metrics
