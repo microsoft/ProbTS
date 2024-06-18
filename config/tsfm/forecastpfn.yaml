@@ -14,7 +14,7 @@ model:
     class_path: probts.model.forecaster.point_forecaster.ForecastPFN
     init_args:
         label_len: 48
-        ckpt_path: /path/to/checkpoints/ForecastPFN/saved_weights
+        ckpt_path: ./checkpoints/ForecastPFN/saved_weights
   quantiles_num: 20
 data:
   data_manager:

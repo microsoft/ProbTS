@@ -13,7 +13,7 @@ model:
   forecaster:
     class_path: probts.model.forecaster.point_forecaster.UniTS
     init_args:
-      ckpt_path: /path/to/checkpoints/units/units_x128_pretrain_checkpoint.pth
+      ckpt_path: ./checkpoints/units/units_x128_pretrain_checkpoint.pth
   quantiles_num: 20
 data:
   data_manager:
