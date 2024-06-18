@@ -24,6 +24,8 @@ def download_and_extract_zip(output_path, zip_name='all_datasets'):
     
 def move_files_up_one_level(directory):
     for item in os.listdir(directory):
+        if item in ['__MACOSX', '.DS_Store', 'all_datasets.zip']:
+            continue
         s = os.path.join(directory, item)
         d = os.path.join(os.path.dirname(directory), item)
         if not os.path.exists(d):
@@ -31,8 +33,11 @@ def move_files_up_one_level(directory):
         else:
             print(f"skip {item} due to file exist")
             delete_path(s)
-            
-    os.rmdir(directory)
+    
+    try:
+        delete_path(directory)
+    except:
+        print(f'cannot delete {directory}, skip...')
     
 def cleanup_directory(directory):
     for root, dirs, files in os.walk(directory):

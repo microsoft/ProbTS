@@ -82,6 +82,7 @@ class ProbTSForecastModule(pl.LightningModule):
     def evaluate(self, batch, stage=''):
         batch_data = ProbTSBatchData(batch, self.device)
         self.batch_size.append(batch_data.past_target_cdf.shape[0])
+        past_data = batch_data.past_target_cdf
         
         # Forecast
         batch_data.past_target_cdf = self.scaler.transform(batch_data.past_target_cdf)
@@ -89,12 +90,12 @@ class ProbTSForecastModule(pl.LightningModule):
         
         # Calculate denorm metrics
         denorm_forecasts = self.scaler.inverse_transform(forecasts)
-        metrics = self.evaluator(batch_data.future_target_cdf, denorm_forecasts)
+        metrics = self.evaluator(batch_data.future_target_cdf, denorm_forecasts, past_data=past_data, freq=self.forecaster.freq)
         self.update_metrics(metrics, stage)
         
         # Calculate norm metrics
         norm_future_target_cdf = self.scaler.transform(batch_data.future_target_cdf)
-        norm_metrics = self.evaluator(norm_future_target_cdf, forecasts)
+        norm_metrics = self.evaluator(norm_future_target_cdf, forecasts, past_data=batch_data.past_target_cdf, freq=self.forecaster.freq)
         self.update_metrics(norm_metrics, stage, 'norm')
         return metrics
 
