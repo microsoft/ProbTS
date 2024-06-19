@@ -52,7 +52,7 @@ def abs_target_mean(target) -> float:
 def mase(
     target: np.ndarray,
     forecast: np.ndarray,
-    seasonal_error: float,
+    seasonal_error: np.ndarray,
 ) -> float:
     r"""
     .. math::
@@ -61,7 +61,10 @@ def mase(
 
     See [HA21]_ for more details.
     """
-    return np.mean(np.abs(target - forecast)) / seasonal_error
+    diff = np.mean(np.abs(target - forecast), axis=1)
+    mase = diff / seasonal_error
+    mase = mase.filled(0)  
+    return np.mean(mase)
 
 def calculate_seasonal_error(
     past_data: np.ndarray,
@@ -89,11 +92,10 @@ def calculate_seasonal_error(
     y_t = past_data[:, :-forecast_freq]
     y_tm = past_data[:, forecast_freq:]
 
-    abs_diff = np.abs(y_t - y_tm)
-    mean_diff = np.mean(abs_diff, axis=1)
+    mean_diff = np.mean(np.abs(y_t - y_tm), axis=1)
     mean_diff = np.expand_dims(mean_diff, axis=1)
 
-    return np.mean(abs(y_t - y_tm))
+    return mean_diff
 
 
 
