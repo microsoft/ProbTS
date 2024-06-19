@@ -1,5 +1,6 @@
 import numpy as np
 from .metrics import *
+import sys
 
 class Evaluator:
     
@@ -84,7 +85,7 @@ class Evaluator:
             forecasts = np.ma.masked_invalid(forecasts)
         
         seasonal_error = calculate_seasonal_error(past_data, freq)
-        
+
         metrics = self.get_metrics(targets, forecasts, seasonal_error=seasonal_error, samples_dim=1)
         metrics_sum = self.get_metrics(targets.sum(axis=-1), forecasts.sum(axis=-1), samples_dim=1)
         

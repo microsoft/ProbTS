@@ -46,6 +46,8 @@ class ProbTSCli(LightningCLI):
             str(self.datamodule.data_manager.context_length),
             str(self.datamodule.data_manager.prediction_length),
             self.model.forecaster.name,
+            str(self.datamodule.data_manager.context_length),
+            str(self.datamodule.data_manager.prediction_length),
             str(config_args.seed_everything)
         ])
         log.info(f"Root dir is {self.trainer.default_root_dir}, exp tag is {self.tag}")
