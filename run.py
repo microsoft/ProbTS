@@ -43,6 +43,8 @@ class ProbTSCli(LightningCLI):
         config_args = self.parser.parse_args()
         self.tag = "_".join([
             self.datamodule.data_manager.dataset,
+            str(self.datamodule.data_manager.context_length),
+            str(self.datamodule.data_manager.prediction_length),
             self.model.forecaster.name,
             str(config_args.seed_everything)
         ])
