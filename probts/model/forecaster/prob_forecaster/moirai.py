@@ -26,7 +26,7 @@ class Moirai(Forecaster):
     ):
         super().__init__(**kwargs)
         self.variate_mode = variate_mode
-        self.patch_size = patch_size
+        self.patch_size = patch_size if patch_size == 'auto' else int(patch_size)
         
         # Load pretrained model
         self.no_training = True
