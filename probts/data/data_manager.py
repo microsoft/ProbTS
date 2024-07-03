@@ -193,7 +193,10 @@ class DataManager:
         return dataset
 
     def get_rolling_test(self, test_set, border_begin_idx, border_end_idx, rolling_length):
-        num_test_dates = int(((border_end_idx - border_begin_idx - self.prediction_length) / rolling_length))
+        if (border_end_idx - border_begin_idx - self.prediction_length) < 0:
+            raise ValueError("The time steps in validation / testing set is less than prediction length.")
+        
+        num_test_dates = int(((border_end_idx - border_begin_idx - self.prediction_length) / rolling_length)) + 1
         print("num_test_dates: ", num_test_dates)
 
         test_set = next(iter(test_set))
