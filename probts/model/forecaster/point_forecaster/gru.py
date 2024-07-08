@@ -25,7 +25,7 @@ class GRUForecaster(Forecaster):
             batch_first=True
         )
         self.linear = nn.Linear(f_hidden_size, self.target_dim)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def loss(self, batch_data):
         inputs = self.get_inputs(batch_data, 'all')

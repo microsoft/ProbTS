@@ -315,7 +315,7 @@ class NHiTS(Forecaster):
             initialization=initialization,
         )
         self.blocks = torch.nn.ModuleList(blocks)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def create_stack(
         self,

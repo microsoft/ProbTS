@@ -77,7 +77,7 @@ class DLinear(Forecaster):
         else:
             self.Linear_Seasonal = nn.Linear(self.context_length, self.prediction_length)
             self.Linear_Trend = nn.Linear(self.context_length, self.prediction_length)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def encoder(self, inputs):
         seasonal_init, trend_init = self.decompsition(inputs)
