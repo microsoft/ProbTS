@@ -115,7 +115,7 @@ class TimesNet(Forecaster):
             )
         else:
             self.enc_linear = nn.Identity()
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def forward(self, x_enc, x_mark_enc=None):
         # Normalization from Non-stationary Transformer

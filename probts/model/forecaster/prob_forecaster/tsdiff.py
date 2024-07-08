@@ -119,7 +119,7 @@ class TSDiffCond(Forecaster):
         features=None,
         noise=None,
         loss_type="l2",
-        reduction="mean",
+        reduction="none",
     ):
         device = next(self.backbone.parameters()).device
         if noise is None:

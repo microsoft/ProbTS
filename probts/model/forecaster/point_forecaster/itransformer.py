@@ -56,7 +56,7 @@ class iTransformer(Forecaster):
             norm_layer=torch.nn.LayerNorm(f_hidden_size)
         )
         self.projector = nn.Linear(f_hidden_size, self.prediction_length, bias=True)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def forward(self, inputs):
         if self.use_time_feat:

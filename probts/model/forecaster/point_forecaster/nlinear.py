@@ -35,7 +35,7 @@ class NLinear(Forecaster):
                 self.Linear.append(nn.Linear(self.context_length,self.prediction_length))
         else:
             self.Linear = nn.Linear(self.context_length, self.prediction_length)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def forward(self, inputs):
         seq_last = inputs[:,-1:,:].detach()

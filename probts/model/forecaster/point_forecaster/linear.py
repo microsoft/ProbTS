@@ -30,7 +30,7 @@ class LinearForecaster(Forecaster):
         else:
             self.linear = nn.Linear(self.context_length, self.prediction_length)
         self.out_linear = nn.Linear(self.input_size, self.target_dim)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def forward(self, x):
         if self.individual:

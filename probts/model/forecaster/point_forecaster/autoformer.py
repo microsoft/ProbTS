@@ -91,7 +91,7 @@ class Autoformer(Forecaster):
             norm_layer=my_Layernorm(f_hidden_size),
             projection=nn.Linear(f_hidden_size, self.target_dim, bias=True)
         )
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
         
     def forward(self, inputs, enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None, *args, **kwargs):
         B, _, _ = inputs.shape
