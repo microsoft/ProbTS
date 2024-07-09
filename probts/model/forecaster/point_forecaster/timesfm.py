@@ -57,11 +57,11 @@ class TimesFM(Forecaster):
         freq = freq.lower()
         
         if freq in freq_dict:
-            self.freq = freq_dict[freq]
+            self.freq_int = freq_dict[freq]
         else:
-            self.freq = 0
+            self.freq_int = 0
 
-        print(f"TimesFM - frequency: {freq}, freq_num: {self.freq}")
+        print(f"TimesFM - frequency: {freq}, freq_num: {self.freq_int}")
     
 
     def forecast(self, batch_data, num_samples=None):
@@ -71,7 +71,7 @@ class TimesFM(Forecaster):
         # past_target = batch_data.past_target_cdf[:, -self.context_length:]
         
         inputs = np.array(rearrange(inputs, 'b l k -> (b k) l'))
-        frequency_input = [self.freq] * inputs.shape[0]
+        frequency_input = [self.freq_int] * inputs.shape[0]
         
         _, out = self.tfm.forecast(
             inputs,
