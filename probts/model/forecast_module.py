@@ -32,7 +32,7 @@ class ProbTSForecastModule(pl.LightningModule):
         self.save_hyperparameters()
         
     @classmethod
-    def load_from_checkpoint(self, checkpoint_path, scaler=None, learning_rate=None, **kwargs):
+    def load_from_checkpoint(self, checkpoint_path, scaler=None, learning_rate=None, no_training=False, **kwargs):
         # Load the checkpoint
         checkpoint = torch.load(checkpoint_path, map_location=lambda storage, loc: storage)
         # Extract the arguments for the forecaster
@@ -53,6 +53,8 @@ class ProbTSForecastModule(pl.LightningModule):
         
         if learning_rate is None:
             learning_rate = checkpoint['hyper_parameters'].get('learning_rate', 1e-3)
+        
+        forecaster.no_training = no_training
         
         # Create the model instance
         model = self(
