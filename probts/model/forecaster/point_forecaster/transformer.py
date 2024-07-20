@@ -39,7 +39,7 @@ class TransformerForecaster(Forecaster):
             self.model.generate_square_subsequent_mask(self.prediction_length),
         )
         self.linear = nn.Linear(self.f_hidden_size, self.target_dim)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss(reduction='none')
 
     def loss(self, batch_data):
         inputs = self.get_inputs(batch_data, 'all') # [B L D]

@@ -1,6 +1,6 @@
 import numpy as np
 from .metrics import *
-import sys
+
 
 class Evaluator:
     
@@ -18,7 +18,7 @@ class Evaluator:
     def coverage_name(self, q):
         return f"Coverage[{q}]"
 
-    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=0):
+    def get_sequence_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1):
         mean_forecasts = forecasts.mean(axis=samples_dim)
         median_forecasts = np.quantile(forecasts, 0.5, axis=samples_dim)
         metrics = {
@@ -56,7 +56,27 @@ class Evaluator:
                 for q in self.quantiles
             ]
         )
+        return metrics
+
+    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1):
+        metrics = {}
+        seq_metrics = {}
         
+        # Calculate metrics for each sequence
+        for i in range(targets.shape[0]):
+            single_seq_metrics = self.get_sequence_metrics(
+                np.expand_dims(targets[i], axis=0),
+                np.expand_dims(forecasts[i], axis=0),
+                np.expand_dims(seasonal_error[i], axis=0) if seasonal_error is not None else None,
+                samples_dim
+            )
+            for metric_name, metric_value in single_seq_metrics.items():
+                if metric_name not in seq_metrics:
+                    seq_metrics[metric_name] = []
+                seq_metrics[metric_name].append(metric_value)
+        
+        for metric_name, metric_values in seq_metrics.items():
+            metrics[metric_name] = np.mean(metric_values)
         return metrics
 
     @property
@@ -95,5 +115,4 @@ class Evaluator:
             output_metrics[k] = metrics[k]
             if k in metrics_sum:
                 output_metrics[f"{k}-Sum"] = metrics_sum[k]
-        
         return output_metrics

@@ -46,8 +46,6 @@ class ProbTSCli(LightningCLI):
             str(self.datamodule.data_manager.context_length),
             str(self.datamodule.data_manager.prediction_length),
             self.model.forecaster.name,
-            str(self.datamodule.data_manager.context_length),
-            str(self.datamodule.data_manager.prediction_length),
             str(config_args.seed_everything)
         ])
         log.info(f"Root dir is {self.trainer.default_root_dir}, exp tag is {self.tag}")
@@ -67,6 +65,7 @@ class ProbTSCli(LightningCLI):
                 prediction_length=self.datamodule.data_manager.prediction_length,
                 lags_list=self.datamodule.data_manager.lags_list,
                 time_feat_dim=self.datamodule.data_manager.time_feat_dim,
+                no_training=self.model.forecaster.no_training,
             )
         
         # Set callbacks
@@ -161,7 +160,8 @@ class ProbTSCli(LightningCLI):
         self.set_test_mode()
         self.trainer.test(model=self.model, datamodule=self.datamodule)
         
-        self.save_exp_summary()
+        if not self.model.forecaster.no_training:
+            self.save_exp_summary()
 
 
 if __name__ == '__main__':
