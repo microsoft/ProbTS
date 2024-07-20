@@ -1011,9 +1011,21 @@ class UniTS(Forecaster):
         self.model = Model(args, configs_list, pretrain=False)
         
         pretrain_weight_path = ckpt_path
-        ckpt = torch.load(pretrain_weight_path, map_location='cuda:0')
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        state_dict = torch.load(pretrain_weight_path, map_location=device)['student']
+        ckpt = {}
+        for k, v in state_dict.items():
+            if not ('cls_prompts' in k):
+                k = k.replace('module.', '') if 'module.' in k else k
+                ckpt[k] = v
+        
         msg = self.model.load_state_dict(ckpt, strict=False)
-        print('load pretrained model:', pretrain_weight_path)
+        print(msg)
+
+        # ckpt = torch.load(pretrain_weight_path)
+        # print('load pretrained model:', pretrain_weight_path)
+        # msg = self.model.load_state_dict(ckpt, strict=False)
         # print(msg)
 
     def generate_units_default_args(self):
@@ -1033,11 +1045,11 @@ class UniTS(Forecaster):
         task_data_config = {
             "LTF_ETTm2_p96": {
                 "task_name": "long_term_forecast",
-                "dataset": "ETTm2",
-                "data": "ETTm2",
+                "dataset": "ETTh1",
+                "data": "ETTh1",
                 "embed": "timeF",
-                "root_path": "./dataset/ETT-small/",
-                "data_path": "ETTm2.csv",
+                # "root_path": "./dataset/ETT-small/",
+                # "data_path": "ETTm2.csv",
                 "features": "M",
                 "seq_len": self.context_length,
                 "label_len": 48,
