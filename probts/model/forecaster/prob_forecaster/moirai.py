@@ -60,3 +60,25 @@ class Moirai(Forecaster):
         else:
             raise ValueError(f"Unknown variate mode: {self.variate_mode}")
         return forecasts
+
+    def embedding(self, batch_data, num_samples=1):
+        if self.variate_mode == 'M':
+            forecasts, emb = self.moirai(
+                past_target=batch_data.past_target_cdf,
+                past_observed_target=batch_data.past_observed_values,
+                past_is_pad=batch_data.past_is_pad,
+                num_samples=num_samples
+            )
+        elif self.variate_mode == 'S':
+            B, L, K = batch_data.past_target_cdf.shape
+            forecasts, emb = self.moirai(
+                past_target=rearrange(batch_data.past_target_cdf, 'b l k -> (b k) l').unsqueeze(-1),
+                past_observed_target=rearrange(batch_data.past_observed_values, 'b l k -> (b k) l').unsqueeze(-1),
+                past_is_pad=repeat(batch_data.past_is_pad, 'b l -> (b k) l', k=K),
+                num_samples=num_samples
+            )
+            forecasts = forecasts.squeeze(-1)
+            forecasts = rearrange(forecasts, '(b k) n l -> b n l k', b=B, k=K)
+        else:
+            raise ValueError(f"Unknown variate mode: {self.variate_mode}")
+        return forecasts.squeeze().transpose(0,1), emb

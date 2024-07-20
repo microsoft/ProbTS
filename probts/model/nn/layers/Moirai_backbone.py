@@ -140,7 +140,7 @@ class MoiraiBackbone(L.LightningModule):
                         is_pad=past_is_pad[..., : self.past_length]
                     )
                 )
-                distr = self._get_distr(
+                distr, emb = self._get_distr(
                     patch_size,
                     past_target[..., -self.hparams.context_length :, :],
                     past_observed_target[..., -self.hparams.context_length :, :],
@@ -158,9 +158,9 @@ class MoiraiBackbone(L.LightningModule):
             val_loss = torch.stack(val_loss)
             preds = torch.stack(preds)
             idx = val_loss.argmin(dim=0)
-            return preds[idx, torch.arange(len(idx), device=idx.device)]
+            return preds[idx, torch.arange(len(idx), device=idx.device)], emb
         else:
-            distr = self._get_distr(
+            distr, emb = self._get_distr(
                 self.hparams.patch_size,
                 past_target[..., -self.hparams.context_length :, :],
                 past_observed_target[..., -self.hparams.context_length :, :],
@@ -169,7 +169,7 @@ class MoiraiBackbone(L.LightningModule):
             preds = distr.sample(torch.Size((num_samples or self.hparams.num_samples,)))
             return self._format_preds(
                 self.hparams.patch_size, preds, past_target.shape[-1]
-            )
+            ), emb
 
     def _val_loss(
         self,
@@ -198,7 +198,7 @@ class MoiraiBackbone(L.LightningModule):
             future_is_pad=is_pad[..., self.hparams.context_length :]
         )
         # get predictions
-        distr = self.module(
+        distr, _ = self.module(
             target,
             observed_mask,
             sample_id,
@@ -239,7 +239,7 @@ class MoiraiBackbone(L.LightningModule):
             past_is_pad
         )
         # get predictions
-        distr = self.module(
+        distr, emb = self.module(
             target,
             observed_mask,
             sample_id,
@@ -248,7 +248,7 @@ class MoiraiBackbone(L.LightningModule):
             prediction_mask,
             torch.ones_like(time_id, dtype=torch.long) * patch_size,
         )
-        return distr
+        return distr, emb
 
     @staticmethod
     def _patched_seq_pad(

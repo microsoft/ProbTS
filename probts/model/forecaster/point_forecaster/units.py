@@ -758,13 +758,14 @@ class Model(nn.Module):
         task_seq_num = self.cls_nums[task_data_name][1]
         real_seq_len = self.cls_nums[task_data_name][2]
 
-        x, means, stdev, n_vars, _ = self.tokenize(x)
+        x, means, stdev, n_vars, _ = self.tokenize(x) # output x shape: [1, 6, 128]
 
         x = self.prepare_prompt(
-            x, n_vars, prefix_prompt, task_prompt, task_prompt_num, task_name='forecast')
+            x, n_vars, prefix_prompt, task_prompt, task_prompt_num, task_name='forecast') # output x shape: [1, 1, 22, 128]
 
         seq_token_len = x.shape[-2]-prefix_prompt.shape[2]
         x = self.backbone(x, prefix_prompt.shape[2], seq_token_len)
+        embedding = x.clone().detach()
 
         x = self.forecast_head(
             x, real_seq_len, seq_token_len)
@@ -774,7 +775,7 @@ class Model(nn.Module):
         x = x * (stdev[:, 0, :].unsqueeze(1).repeat(1, x.shape[1], 1))
         x = x + (means[:, 0, :].unsqueeze(1).repeat(1, x.shape[1], 1))
 
-        return x
+        return x, embedding#, tokens, prompt
 
     def classification(self, x, x_mark, task_id):
         dataset_name = self.configs_list[task_id][1]['dataset']
@@ -1023,7 +1024,7 @@ class UniTS(Forecaster):
                 self.n_heads = 8
                 self.e_layers = 3
                 self.prompt_num = 10
-                self.dropout = 0.1
+                self.dropout = 0.0 # for reproduction
                 self.patch_len = 16
                 self.stride = 16
                 self.batch_size = 32
@@ -1060,3 +1061,8 @@ class UniTS(Forecaster):
         B, _, K = inputs.shape
         point_forecast = self.model.forward(inputs, None)
         return point_forecast.unsqueeze(1)
+
+    def embedding(self, inputs):
+        inputs = inputs[:, -self.context_length:]
+        point_forecast, embedding = self.model.forward(inputs, None)
+        return point_forecast, embedding

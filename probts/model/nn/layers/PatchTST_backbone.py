@@ -80,6 +80,7 @@ class PatchTST_backbone(nn.Module):
         
         # model
         z = self.backbone(z)                                                                # z: [bs x nvars x d_model x patch_num]
+        emb = z.detach().clone()
         z = self.head(z)                                                                    # z: [bs x nvars x target_window] 
         
         # denorm
@@ -87,7 +88,7 @@ class PatchTST_backbone(nn.Module):
             z = z.permute(0,2,1)
             z = self.revin_layer(z, 'denorm')
             z = z.permute(0,2,1)
-        return z
+        return z, emb
     
     def create_pretrain_head(self, head_nf, vars, dropout):
         return nn.Sequential(nn.Dropout(dropout),
