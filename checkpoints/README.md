@@ -28,3 +28,13 @@ You can also download the newest checkpoints from the following repositories:
 | `TimesFM` | [Link](https://huggingface.co/google/timesfm-1.0-200m) |
 
 </center>
+
+## For embedding mode:
+
+You need to make the following change to `moirai` (`submodules/uni2ts/src/uni2ts/model/moirai/module.py`, line 140)
+```python
+embeddings = reprs.detach().clone()
+distr_param = self.param_proj(reprs, patch_size)
+distr = self.distr_output.distribution(distr_param, loc=loc, scale=scale)
+return distr, embeddings
+```

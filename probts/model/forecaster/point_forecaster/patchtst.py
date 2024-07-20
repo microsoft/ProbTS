@@ -41,7 +41,7 @@ class PatchTST(Forecaster):
         individual: bool = False,
         head_type: str = 'flatten',
         padding_var: Optional[int] = None, 
-        revin: bool = True,
+        revin: bool = False,
         key_padding_mask: str = 'auto',
         affine: bool = False,
         subtract_last: bool = False,
@@ -55,6 +55,7 @@ class PatchTST(Forecaster):
         super().__init__(**kwargs)
         
         if self.input_size != self.target_dim:
+            print(f"Input size ({self.input_size}) and target dimension ({self.target_dim}) are not equal. Using linear layer to match dimensions.")
             self.enc_linear = nn.Linear(
                 in_features=self.input_size, out_features=self.target_dim
             )
@@ -65,7 +66,7 @@ class PatchTST(Forecaster):
         c_in = self.input_size
         context_window = self.context_length
         target_window = self.prediction_length
-
+        revin = False # TODO: set to False only in embedding mode
         # Model
         self.decomposition = decomposition
         if self.decomposition:
@@ -101,13 +102,13 @@ class PatchTST(Forecaster):
         if self.decomposition:
             res_init, trend_init = self.decomp_module(x)
             res_init, trend_init = res_init.permute(0,2,1), trend_init.permute(0,2,1)  # x: [Batch, Channel, Input length]
-            res = self.model_res(res_init)
-            trend = self.model_trend(trend_init)
+            res, _ = self.model_res(res_init)
+            trend, _ = self.model_trend(trend_init)
             x = res + trend
             x = x.permute(0,2,1)    # x: [Batch, Input length, Channel]
         else:
             x = x.permute(0,2,1)    # x: [Batch, Channel, Input length]
-            x = self.model(x)
+            x, _ = self.model(x)
             x = x.permute(0,2,1)    # x: [Batch, Input length, Channel]
         return x
 
@@ -125,3 +126,11 @@ class PatchTST(Forecaster):
         inputs = self.enc_linear(inputs)
         outputs = self(inputs)
         return outputs.unsqueeze(1)
+
+    def embedding(self, batch_data):
+        inputs = self.get_inputs(batch_data, 'encode')
+        x = self.enc_linear(inputs)
+        x = x.permute(0,2,1)    # x: [Batch, Channel, Input length]
+        x, emb = self.model(x)
+        x = x.permute(0,2,1)    # x: [Batch, Input length, Channel]
+        return x, emb
