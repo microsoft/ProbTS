@@ -21,6 +21,7 @@ class Forecaster(nn.Module):
         use_scaling: bool = False,
         autoregressive: bool = False,
         no_training: bool = False,
+        dataset: str = None,
         **kwargs
     ):
         super().__init__()
@@ -37,6 +38,7 @@ class Forecaster(nn.Module):
         self.autoregressive = autoregressive
         self.no_training = no_training
         self.use_scaling = use_scaling
+        self.dataset = dataset
         # Lag parameters
         self.lags_list = lags_list
         if self.use_scaling:

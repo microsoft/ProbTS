@@ -14,7 +14,7 @@ model:
     class_path: probts.model.forecaster.point_forecaster.Timer
     init_args:
         label_len: 96
-        ckpt_path: /path/to/checkpoints/timer/Timer_67M_UTSD_4G.pt
+        ckpt_path: ./checkpoints/timer/Timer_67M_UTSD_4G.pt
   quantiles_num: 20
 data:
   data_manager:

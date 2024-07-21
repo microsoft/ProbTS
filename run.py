@@ -32,7 +32,8 @@ class ProbTSCli(LightningCLI):
             "lags_list",
             "freq",
             "time_feat_dim",
-            "global_mean"
+            "global_mean",
+            "dataset"
         ]
         for arg in data_to_model_link_args:
             parser.link_arguments(f"data.data_manager.{arg}", f"model.{arg}", apply_on="instantiate")

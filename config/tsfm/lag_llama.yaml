@@ -14,7 +14,7 @@ model:
     class_path: probts.model.forecaster.prob_forecaster.LagLlama
     init_args:
       use_rope_scaling: true
-      ckpt_path: /path/to/checkpoints/lagllama/lag-llama.ckpt
+      ckpt_path: ./checkpoints/lag-llama/lag-llama.ckpt
   num_samples: 100
   quantiles_num: 20
 data:

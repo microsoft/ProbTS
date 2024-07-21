@@ -1007,16 +1007,26 @@ class UniTS(Forecaster):
         super().__init__(**kwargs)
         self.no_training = True
 
-        args, configs_list = self.generate_units_default_args()
+        args, configs_list = self.generate_units_default_args(self.dataset)
         self.model = Model(args, configs_list, pretrain=False)
         
         pretrain_weight_path = ckpt_path
-        ckpt = torch.load(pretrain_weight_path, map_location='cuda:0')
-        msg = self.model.load_state_dict(ckpt, strict=False)
-        print('load pretrained model:', pretrain_weight_path)
-        # print(msg)
 
-    def generate_units_default_args(self):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        state_dict = torch.load(pretrain_weight_path, map_location=device)['student']
+        ckpt = {}
+        for k, v in state_dict.items():
+            if not ('cls_prompts' in k):
+                k = k.replace('module.', '') if 'module.' in k else k
+                ckpt[k] = v
+        
+        msg = self.model.load_state_dict(ckpt, strict=False)
+        if len(msg.missing_keys) > 0:
+            print(f"""Warning: There are missing keys in the pretrained model: {msg.missing_keys}, 
+                which may cause prediction results less accurate.""")
+
+
+    def generate_units_default_args(self, dataset_name='ETTh1'):
         class Args:
             def __init__(self):
                 self.d_model = 128
@@ -1030,14 +1040,29 @@ class UniTS(Forecaster):
 
         args = Args()
 
+        # parse dataset names - ECL, ETTh1, Exchange, ILI, Traffic, Weather
+        units_valid_dataset_map = {
+            'ECL': ['ECL', 'electricity'],
+            'ETTh1': ['ETT'],
+            'Exchange': ['Exchange'],
+            'ILI': ['ILI'],
+            'Traffic': ['Traffic'],
+            'Weather': ['Weather']
+        }
+
+        units_dataset_name = 'DEFAULT'
+        for key, value_list in units_valid_dataset_map.items():
+            if any(substring.lower() in dataset_name for substring in value_list):
+                units_dataset_name = key
+                break
+        task_name = f"LTF_{units_dataset_name}_p{self.prediction_length}"
+
         task_data_config = {
-            "LTF_ETTm2_p96": {
+            task_name: {
                 "task_name": "long_term_forecast",
-                "dataset": "ETTm2",
-                "data": "ETTm2",
+                "dataset": units_dataset_name,
+                "data": units_dataset_name,
                 "embed": "timeF",
-                "root_path": "./dataset/ETT-small/",
-                "data_path": "ETTm2.csv",
                 "features": "M",
                 "seq_len": self.context_length,
                 "label_len": 48,
