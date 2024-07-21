@@ -1007,7 +1007,7 @@ class UniTS(Forecaster):
         super().__init__(**kwargs)
         self.no_training = True
 
-        args, configs_list = self.generate_units_default_args()
+        args, configs_list = self.generate_units_default_args(self.dataset)
         self.model = Model(args, configs_list, pretrain=False)
         
         pretrain_weight_path = ckpt_path
@@ -1021,14 +1021,12 @@ class UniTS(Forecaster):
                 ckpt[k] = v
         
         msg = self.model.load_state_dict(ckpt, strict=False)
-        print(msg)
+        if len(msg.missing_keys) > 0:
+            print(f"""Warning: There are missing keys in the pretrained model: {msg.missing_keys}, 
+                which may cause prediction results less accurate.""")
 
-        # ckpt = torch.load(pretrain_weight_path)
-        # print('load pretrained model:', pretrain_weight_path)
-        # msg = self.model.load_state_dict(ckpt, strict=False)
-        # print(msg)
 
-    def generate_units_default_args(self):
+    def generate_units_default_args(self, dataset_name='ETTh1'):
         class Args:
             def __init__(self):
                 self.d_model = 128
@@ -1042,14 +1040,29 @@ class UniTS(Forecaster):
 
         args = Args()
 
+        # parse dataset names - ECL, ETTh1, Exchange, ILI, Traffic, Weather
+        units_valid_dataset_map = {
+            'ECL': ['ECL', 'electricity'],
+            'ETTh1': ['ETT'],
+            'Exchange': ['Exchange'],
+            'ILI': ['ILI'],
+            'Traffic': ['Traffic'],
+            'Weather': ['Weather']
+        }
+
+        units_dataset_name = 'DEFAULT'
+        for key, value_list in units_valid_dataset_map.items():
+            if any(substring.lower() in dataset_name for substring in value_list):
+                units_dataset_name = key
+                break
+        task_name = f"LTF_{units_dataset_name}_p{self.prediction_length}"
+
         task_data_config = {
-            "LTF_ETTm2_p96": {
+            task_name: {
                 "task_name": "long_term_forecast",
-                "dataset": "ETTh1",
-                "data": "ETTh1",
+                "dataset": units_dataset_name,
+                "data": units_dataset_name,
                 "embed": "timeF",
-                # "root_path": "./dataset/ETT-small/",
-                # "data_path": "ETTm2.csv",
                 "features": "M",
                 "seq_len": self.context_length,
                 "label_len": 48,
