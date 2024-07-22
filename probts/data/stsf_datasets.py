@@ -5,189 +5,191 @@
 # We thank the authors for their contributions.
 # ---------------------------------------------------------------------------------
 
+from copy import deepcopy
+from pathlib import Path
 
-from torch.utils.data import IterableDataset
-from gluonts.env import env
-from gluonts.dataset.common import Dataset
-from gluonts.itertools import Cyclic
+import torch
+from gluonts.dataset.common import ListDataset
 from gluonts.dataset.field_names import FieldName
-from gluonts.transform import (
-    SelectFields,
-    Transformation,
-    Chain,
-    InstanceSplitter,
-    ValidationSplitSampler,
-    TestSplitSampler,
-    ExpectedNumInstanceSampler,
-    RenameFields,
-    AsNumpyArray,
-    ExpandDimArray,
-    AddObservedValuesIndicator,
-    AddTimeFeatures,
-    VstackFeatures,
-    SetFieldIfNotPresent,
-    TargetDimIndicator,
-    TransformedDataset,
-)
-from .time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
+from gluonts.dataset.multivariate_grouper import MultivariateGrouper
+from gluonts.dataset.repository import datasets
+
+from .probts_datasets import ProbTSDataset
+from .time_features import get_lags
+
+MULTI_VARIATE_DATASETS = [
+    "exchange_rate_nips",
+    "solar_nips",
+    "electricity_nips",
+    "traffic_nips",
+    "taxi_30min",
+    "wiki-rolling_nips",
+    "wiki2000_nips",
+]
 
 
-class GluonTSDataset():
-
+class GluonTSDatasetLoader(ProbTSDataset):
     def __init__(
         self,
         input_names: list,
+        context_length: int,
         history_length: int,
         prediction_length: int,
-        freq: str,
-        multivariate: bool = True
+        dataset: str,
+        path: str,
+        scaler: str,
+        var_specific_norm: bool,
+        **kwargs,
     ):
-        super().__init__()
-        self.input_names_ = input_names
-        self.history_length = history_length
-        self.prediction_length = prediction_length
-        self.freq = freq
+        super().__init__(
+            input_names,
+            context_length,
+            history_length,
+            prediction_length,
+            scaler,
+            var_specific_norm,
+        )
+        self.context_length_factor = kwargs.get("context_length_factor", 1)
+        multivariate = True
+        split_val = True
+
+        self.__read_data(dataset, path)
+        # self.prepare_STSF_dataset(dataset)
+
+        if dataset in MULTI_VARIATE_DATASETS:
+            self.num_test_dates = int(
+                len(self.dataset_raw.test) / len(self.dataset_raw.train)
+            )
+
+            train_grouper = MultivariateGrouper(max_target_dim=int(self.target_dim))
+            test_grouper = MultivariateGrouper(
+                num_test_dates=self.num_test_dates, max_target_dim=int(self.target_dim)
+            )
+            train_set = train_grouper(self.dataset_raw.train)
+            test_set = test_grouper(self.dataset_raw.test)
+            self.scaler.fit(torch.tensor(train_set[0]["target"].transpose(1, 0)))
+            self.global_mean = torch.mean(torch.tensor(train_set[0]["target"]), dim=-1)
+        else:
+            self.target_dim = 1
+            multivariate = False
+            self.num_test_dates = 1
+            self.train_set = self.dataset_raw.train
+            self.test_set = self.dataset_raw.test
+            self.test_set = self.truncate_test(test_set)
+            self.global_mean = torch.mean(
+                torch.tensor(self.train_set[0]["target"]), dim=-1
+            )  # TODO: check this
+
+        if split_val:
+            self.train_set, self.val_set = self.split_train_val(train_set)
+        else:
+            self.val_set = test_set
+
         if multivariate:
             self.expected_ndim = 2
         else:
             self.expected_ndim = 1
 
-    def get_sampler(self):
-        self.train_sampler = ExpectedNumInstanceSampler(
-            num_instances=1.0,
-            min_past=self.history_length,
-            min_future=self.prediction_length,
+    def __read_data(self, dataset, path):
+        self.dataset_raw = datasets.get_dataset(
+            dataset, path=Path(path), regenerate=False
         )
 
-        self.val_sampler = ValidationSplitSampler(
-            min_past=self.history_length,
-            min_future=self.prediction_length,
+        # Meta parameters
+        self.target_dim = int(self.dataset_raw.metadata.feat_static_cat[0].cardinality)
+        self.freq = self.dataset_raw.metadata.freq.upper()
+        self.lags_list = get_lags(self.freq)
+        self.prediction_length = (
+            self.dataset_raw.metadata.prediction_length
+            if self.prediction_length is None
+            else self.prediction_length
         )
-        
-        self.test_sampler = ValidationSplitSampler(
-            min_past=self.history_length,
-            min_future=self.prediction_length,
+        self.context_length = (
+            self.dataset_raw.metadata.prediction_length * self.context_length_factor
+            if self.context_length is None
+            else self.context_length
+        )
+        self.history_length = (
+            (self.context_length + max(self.lags_list))
+            if self.history_length is None
+            else self.history_length
         )
 
+    def get_iter_dataset(self, mode: str):
+        if mode == "train":
+            return super().get_iter_dataset(self.train_set, mode)
+        elif mode == "val":
+            return super().get_iter_dataset(self.val_set, mode)
+        elif mode == "test":
+            return super().get_iter_dataset(self.test_set, mode)
 
-    def create_transformation(self, data_stamp=None) -> Transformation:
-        
-        if data_stamp is None:
-            if self.freq in ["M", "W", "D", "B", "H", "min", "T"]:
-                time_features = fourier_time_features_from_frequency(self.freq)
+    def split_train_val(self, train_set):
+        trunc_train_list = []
+        val_set_list = []
+        univariate = False
+
+        for train_seq in iter(train_set):
+            # truncate train set
+            offset = self.num_test_dates * self.prediction_length
+            trunc_train_seq = deepcopy(train_seq)
+
+            if len(train_seq[FieldName.TARGET].shape) == 1:
+                trunc_train_len = train_seq[FieldName.TARGET].shape[0] - offset
+                trunc_train_seq[FieldName.TARGET] = train_seq[FieldName.TARGET][
+                    :trunc_train_len
+                ]
+                univariate = True
+            elif len(train_seq[FieldName.TARGET].shape) == 2:
+                trunc_train_len = train_seq[FieldName.TARGET].shape[1] - offset
+                trunc_train_seq[FieldName.TARGET] = train_seq[FieldName.TARGET][
+                    :, :trunc_train_len
+                ]
             else:
-                time_features = fourier_time_features_from_frequency('D')
-            self.time_feat_dim = len(time_features) * 2
-            time_feature_func = AddTimeFeatures
-        else:
-            self.time_feat_dim = data_stamp.shape[-1]
-            time_features = data_stamp
-            time_feature_func = AddCustomizedTimeFeatures
+                raise ValueError(
+                    f"Invalid Data Shape: {str(len(train_seq[FieldName.TARGET].shape))}"
+                )
 
-        return Chain(
-            [
-                AsNumpyArray(
-                    field=FieldName.TARGET,
-                    expected_ndim=self.expected_ndim,
-                ),
-                ExpandDimArray(
-                    field=FieldName.TARGET,
-                    axis=None,
-                ),
-                AddObservedValuesIndicator(
-                    target_field=FieldName.TARGET,
-                    output_field=FieldName.OBSERVED_VALUES,
-                ),
-                time_feature_func(
-                    start_field=FieldName.START,
-                    target_field=FieldName.TARGET,
-                    output_field=FieldName.FEAT_TIME,
-                    time_features=time_features,
-                    pred_length=self.prediction_length,
-                ),
-                VstackFeatures(
-                    output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME],
-                ),
-                SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
-                TargetDimIndicator(
-                    field_name="target_dimension_indicator",
-                    target_field=FieldName.TARGET,
-                ),
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
+            trunc_train_list.append(trunc_train_seq)
+
+            # construct val set by rolling
+            for i in range(self.num_test_dates):
+                val_seq = deepcopy(train_seq)
+                rolling_len = trunc_train_len + self.prediction_length * (i + 1)
+                if univariate:
+                    val_seq[FieldName.TARGET] = val_seq[FieldName.TARGET][
+                        trunc_train_len
+                        + self.prediction_length * (i - 1)
+                        - self.context_length : rolling_len
+                    ]
+                else:
+                    val_seq[FieldName.TARGET] = val_seq[FieldName.TARGET][
+                        :, :rolling_len
+                    ]
+
+                val_set_list.append(val_seq)
+
+        trunc_train_set = ListDataset(
+            trunc_train_list, freq=self.freq, one_dim_target=univariate
+        )
+
+        val_set = ListDataset(val_set_list, freq=self.freq, one_dim_target=univariate)
+
+        return trunc_train_set, val_set
+
+    def truncate_test(self, test_set):
+        trunc_test_list = []
+        for test_seq in iter(test_set):
+            # truncate train set
+            trunc_test_seq = deepcopy(test_seq)
+
+            trunc_test_seq[FieldName.TARGET] = trunc_test_seq[FieldName.TARGET][
+                -(self.prediction_length * 2 + self.context_length) :
             ]
+
+            trunc_test_list.append(trunc_test_seq)
+
+        trunc_test_set = ListDataset(
+            trunc_test_list, freq=self.freq, one_dim_target=True
         )
 
-    def create_instance_splitter(self, mode: str):
-        assert mode in ["train", "val", "test"]
-
-        self.get_sampler()
-        instance_sampler = {
-            "train": self.train_sampler,
-            "val": self.val_sampler,
-            "test": self.test_sampler,
-        }[mode]
-
-        return InstanceSplitter(
-            target_field=FieldName.TARGET,
-            is_pad_field=FieldName.IS_PAD,
-            start_field=FieldName.START,
-            forecast_start_field=FieldName.FORECAST_START,
-            instance_sampler=instance_sampler,
-            past_length=self.history_length,
-            future_length=self.prediction_length,
-            time_series_fields=[
-                FieldName.FEAT_TIME,
-                FieldName.OBSERVED_VALUES,
-            ],
-        ) + (
-            RenameFields(
-                {
-                    f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
-                    f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
-                }
-            )
-        )
-
-    def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None) -> IterableDataset:
-        assert mode in ["train", "val", "test"]
-
-        transform = self.create_transformation(data_stamp)
-        if mode == 'train':
-            with env._let(max_idle_transforms=100):
-                instance_splitter = self.create_instance_splitter(mode)
-        else:
-            instance_splitter = self.create_instance_splitter(mode)
-
-
-        input_names = self.input_names_
-
-        iter_dataset = TransformedIterableDataset(
-            dataset,
-            transform=transform
-            + instance_splitter
-            + SelectFields(input_names),
-            is_train=True if mode == 'train' else False
-        )
-
-        return iter_dataset
-
-
-
-class TransformedIterableDataset(IterableDataset):
-    def __init__(
-        self,
-        dataset: Dataset,
-        transform: Transformation,
-        is_train: bool = True
-    ):
-        super().__init__()
-
-        self.transformed_dataset = TransformedDataset(
-            Cyclic(dataset) if is_train else dataset,
-            transform,
-            is_train=is_train,
-        )
-
-    def __iter__(self):
-        return iter(self.transformed_dataset)
+        return trunc_test_set

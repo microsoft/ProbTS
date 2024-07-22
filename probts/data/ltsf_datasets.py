@@ -1,106 +1,149 @@
-# ---------------------------------------------------------------------------------
-# Portions of this file are derived from Autoformer
-# - Source: https://github.com/thuml/Autoformer/tree/main
-#
-# We thank the authors for their contributions.
-# ---------------------------------------------------------------------------------
+from copy import deepcopy
+
+import torch
+from gluonts.dataset.common import ListDataset
+from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.multivariate_grouper import MultivariateGrouper
+
+from .probts_datasets import ProbTSDataset
+from .time_features import get_lags
+from .utils import get_LTSF_borders, get_LTSF_Dataset, get_LTSF_info
 
 
-import os
-import pandas as pd
-from .time_features import time_features
-import numpy as np
+class LongTermTSDatasetLoader(ProbTSDataset):
+    def __init__(
+        self,
+        input_names: list,
+        context_length: int,
+        history_length: int,
+        prediction_length: int,
+        dataset: str,
+        path: str,
+        scaler: str,
+        var_specific_norm: bool,
+        **kwargs,
+    ):
+        super().__init__(
+            input_names,
+            context_length,
+            history_length,
+            prediction_length,
+            scaler,
+            var_specific_norm,
+        )
 
-def get_LTSF_info(dataset):
-    if dataset == 'etth1' or dataset == 'etth2':
-        if dataset == 'etth1':
-            data_path = 'ETT-small/ETTh1.csv'
-        else:
-            data_path = 'ETT-small/ETTh2.csv'
-        freq = 'H'
-    elif dataset == 'ettm1' or dataset == 'ettm2':
-        if dataset == 'ettm1':
-            data_path = 'ETT-small/ETTm1.csv'
-        else:
-            data_path = 'ETT-small/ETTm2.csv'
-        freq = 'min'
-    elif dataset in ['traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf']:
-        if dataset == 'traffic_ltsf':
-            data_path = 'traffic/traffic.csv'
-            freq = 'H'
-        elif dataset == 'electricity_ltsf':
-            data_path = 'electricity/electricity.csv'
-            freq = 'H'
-        elif dataset == 'exchange_ltsf':
-            data_path = 'exchange_rate/exchange_rate.csv'
-            freq = 'B'
-        elif dataset == 'illness_ltsf':
-            data_path = 'illness/national_illness.csv'
-            freq = 'W'
-        elif dataset == 'weather_ltsf':
-            data_path = 'weather/weather.csv'
-            freq = 'min'
-    elif dataset == 'caiso':
-        data_path = 'caiso/caiso_20130101_20210630.csv'
-        freq = 'H'
-    elif dataset == 'nordpool':
-        data_path = 'nordpool/production.csv'
-        freq = 'H'
-    else:
-        raise ValueError(f"Invalid dataset name: {dataset}!")
-    return data_path, freq
+        self.timeenc = kwargs.get("timeenc", 1)
+        self.__read_data(dataset, path)
 
-def get_LTSF_borders(dataset, data_size):
-    if dataset == 'etth1' or dataset == 'etth2':
-        border_begin = [0, 12 * 30 * 24, 12 * 30 * 24 + 4 * 30 * 24]
-        border_end = [12 * 30 * 24, 12 * 30 * 24 + 4 * 30 * 24, 12 * 30 * 24 + 8 * 30 * 24]
-    elif dataset == 'ettm1' or dataset == 'ettm2':
-        border_begin = [0, 12 * 30 * 24 * 4, 12 * 30 * 24 * 4 + 4 * 30 * 24 * 4]
-        border_end = [12 * 30 * 24 * 4, 12 * 30 * 24 * 4 + 4 * 30 * 24 * 4, 12 * 30 * 24 * 4 + 8 * 30 * 24 * 4]
-    else:
-        num_train = int(data_size * 0.7)
-        num_test = int(data_size * 0.2)
-        num_vali = data_size - num_train - num_test
-        border_begin = [0, num_train, data_size - num_test]
-        border_end = [num_train, num_train + num_vali, data_size]
-    return border_begin, border_end
+        train_data = self.dataset_raw[: self.border_end[0]]
+        val_data = self.dataset_raw[: self.border_end[1]]
+        test_data = self.dataset_raw[: self.border_end[2]]
 
-def get_LTSF_Dataset(root_path, data_path,freq='h', timeenc=1):
-    if 'caiso' in data_path:
-        data = pd.read_csv(root_path + data_path)
-        data['Date'] = data['Date'].astype('datetime64[ns]')
-        names = ['PGE','SCE','SDGE','VEA','CA ISO','PACE','PACW','NEVP','AZPS','PSEI']
-        df_raw = pd.DataFrame(pd.date_range('20130101','20210630',freq='H')[:-1], columns=['Date'])
-        for name in names:
-            current_df = data[data['zone'] == name].drop_duplicates(subset='Date', keep='last').rename(columns={'load':name}).drop(columns=['zone'])
-            df_raw = df_raw.merge(current_df, on='Date', how='outer')
-        df_raw = df_raw.rename(columns={'Date': 'date'})
-    elif 'nordpool' in data_path:
-        df_raw = pd.read_csv(root_path + data_path, parse_dates=['Time'])
-        df_raw = df_raw.rename(columns={'Time': 'date'})
-    else:
-        df_raw = pd.read_csv(os.path.join(root_path, data_path))
-        
-    df_stamp = df_raw[['date']]
-    df_stamp['date'] = pd.to_datetime(df_stamp.date)
-    
-    if timeenc == 0:
-        df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
-        df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
-        df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-        df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
-        df_stamp['minute'] = df_stamp.date.apply(lambda row: row.minute, 1)
-        df_stamp['minute'] = df_stamp.minute.map(lambda x: x // 15)
-        data_stamp = df_stamp.drop(labels='date', axis=1).values
-    elif timeenc == 1:
-        data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=freq)
-        data_stamp = data_stamp.transpose(1, 0)
-    elif timeenc == 2:
-        data_stamp = pd.to_datetime(df_stamp['date'].values)
-        data_stamp = np.array(data_stamp, dtype='datetime64[s]')
+        self.scaler.fit(torch.tensor(train_data.values))
 
-    df_raw = df_raw.set_index(keys='date')
-    df_raw = df_raw.fillna(0)
-    target_dim = len(df_raw.columns)
-    data_size = len(df_raw)
-    return df_raw, data_stamp, target_dim, data_size
+        train_set = self.df_to_mvds(train_data, freq=self.freq)
+        val_set = self.df_to_mvds(val_data, freq=self.freq)
+        test_set = self.df_to_mvds(test_data, freq=self.freq)
+
+        train_grouper = MultivariateGrouper(max_target_dim=self.target_dim)
+        test_grouper = MultivariateGrouper(max_target_dim=self.target_dim)
+
+        self.group_train_set = train_grouper(train_set)
+        self.group_val_set = test_grouper(val_set)
+        self.group_test_set = test_grouper(test_set)
+
+        self.group_val_set = self.get_rolling_test(
+            self.group_val_set,
+            self.border_begin[1],
+            self.border_end[1],
+            rolling_length=self.test_rolling_length,
+        )
+        self.group_test_set = self.get_rolling_test(
+            self.group_test_set,
+            self.border_begin[2],
+            self.border_end[2],
+            rolling_length=self.test_rolling_length,
+        )
+
+        self.global_mean = torch.mean(
+            torch.tensor(self.group_train_set[0]["target"]), dim=-1
+        )
+
+    def __read_data(self, dataset, path):
+        data_path, self.freq = get_LTSF_info(dataset)
+        self.dataset_raw, self.data_stamp, self.target_dim, data_size = (
+            get_LTSF_Dataset(path, data_path, timeenc=self.timeenc)
+        )
+        self.border_begin, self.border_end = get_LTSF_borders(dataset, data_size)
+
+        assert data_size >= self.border_end[2], print(
+            "\n The end index larger then data size!"
+        )
+
+        # Meta parameters
+        self.lags_list = get_lags(self.freq)
+        self.history_length = (
+            (self.context_length + max(self.lags_list))
+            if self.history_length is None
+            else self.history_length
+        )
+
+    def get_iter_dataset(self, mode: str):
+        if mode == "train":
+            return super().get_iter_dataset(
+                self.group_train_set, mode, self.data_stamp[: self.border_end[0]]
+            )
+        elif mode == "val":
+            return super().get_iter_dataset(
+                self.group_val_set, mode, self.data_stamp[: self.border_end[1]]
+            )
+        elif mode == "test":
+            return super().get_iter_dataset(
+                self.group_test_set, mode, self.data_stamp[: self.border_end[2]]
+            )
+
+    def df_to_mvds(self, df, freq="H"):
+        datasets = []
+        for variable in df.keys():
+            ds = {
+                "item_id": variable,
+                "target": df[variable],
+                "start": str(df.index[0]),
+            }
+            datasets.append(ds)
+        dataset = ListDataset(datasets, freq=freq)
+        return dataset
+
+    def get_rolling_test(
+        self, test_set, border_begin_idx, border_end_idx, rolling_length
+    ):
+        if (border_end_idx - border_begin_idx - self.prediction_length) < 0:
+            raise ValueError(
+                "The time steps in validation / testing set is less than prediction length."
+            )
+
+        num_test_dates = (
+            int(
+                (
+                    (border_end_idx - border_begin_idx - self.prediction_length)
+                    / rolling_length
+                )
+            )
+            + 1
+        )
+        print("num_test_dates: ", num_test_dates)
+
+        test_set = next(iter(test_set))
+        rolling_test_seq_list = list()
+        for i in range(num_test_dates):
+            rolling_test_seq = deepcopy(test_set)
+            rolling_end = border_begin_idx + self.prediction_length + i * rolling_length
+            rolling_test_seq[FieldName.TARGET] = rolling_test_seq[FieldName.TARGET][
+                :, :rolling_end
+            ]
+            rolling_test_seq_list.append(rolling_test_seq)
+
+        rolling_test_set = ListDataset(
+            rolling_test_seq_list, freq=self.freq, one_dim_target=False
+        )
+        return rolling_test_set

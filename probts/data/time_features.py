@@ -6,17 +6,16 @@
 # ---------------------------------------------------------------------------------
 
 
-
-from typing import List
+from typing import List, Type
 
 import numpy as np
 import pandas as pd
-from pandas.tseries import offsets
-from pandas.tseries.frequencies import to_offset
 from gluonts.core.component import validated
 from gluonts.dataset.common import DataEntry
 from gluonts.transform import MapTransformation
-from typing import List, Type
+from pandas.tseries import offsets
+from pandas.tseries.frequencies import to_offset
+
 
 class TimeFeature:
     def __init__(self):
@@ -142,9 +141,8 @@ def time_features_from_frequency_str(freq_str: str) -> List[TimeFeature]:
     raise RuntimeError(supported_freq_msg)
 
 
-def time_features(dates, freq='h'):
+def time_features(dates, freq="h"):
     return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)])
-
 
 
 class FourierDateFeatures(TimeFeature):
@@ -209,7 +207,7 @@ def fourier_time_features_from_frequency(freq_str: str) -> List[TimeFeature]:
     return feature_classes
 
 
-def get_lags(freq_str:str):
+def get_lags(freq_str: str):
     freq_str = freq_str.upper()
     if freq_str == "M":
         lags = [1, 12]
@@ -283,5 +281,5 @@ class AddCustomizedTimeFeatures(MapTransformation):
             data[self.output_field] = self.date_features[:length].astype(np.float64)
         data[self.output_field] = self.date_features[:length].astype(np.float64)
         data[self.output_field] = np.transpose(data[self.output_field])
-        
+
         return data

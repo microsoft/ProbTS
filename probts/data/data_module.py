@@ -1,18 +1,19 @@
-import os
 import lightning.pytorch as pl
 from torch.utils.data import DataLoader
 from .data_manager import DataManager
 
+
 class ProbTSDataModule(pl.LightningDataModule):
     r"""
-        DataModule for probablistic time series datasets.
+    DataModule for probablistic time series datasets.
     """
+
     def __init__(
         self,
         data_manager: DataManager,
         batch_size: int = 64,
         test_batch_size: int = 8,
-        num_workers: int = 8
+        num_workers: int = 8,
     ):
         super().__init__()
         self.data_manager = data_manager
@@ -32,15 +33,21 @@ class ProbTSDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             persistent_workers=True,
-            pin_memory=True
+            pin_memory=True,
         )
 
     def val_dataloader(self):
-        val_dataloader = DataLoader(self.dataset_val, batch_size=self.test_batch_size, num_workers=1)
+        val_dataloader = DataLoader(
+            self.dataset_val, batch_size=self.test_batch_size, num_workers=1
+        )
         return val_dataloader
 
     def test_dataloader(self):
-        return DataLoader(self.dataset_test, batch_size=self.test_batch_size, num_workers=1)
+        return DataLoader(
+            self.dataset_test, batch_size=self.test_batch_size, num_workers=1
+        )
 
     def predict_dataloader(self):
-        return DataLoader(self.dataset_test, batch_size=self.test_batch_size, num_workers=1)
+        return DataLoader(
+            self.dataset_test, batch_size=self.test_batch_size, num_workers=1
+        )
