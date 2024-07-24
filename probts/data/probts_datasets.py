@@ -105,14 +105,14 @@ class ProbTSDataset:
 
         return Chain(
             [
-                AsNumpyArray(
-                    field=FieldName.TARGET,
-                    expected_ndim=self.expected_ndim,
-                ),
-                ExpandDimArray(
-                    field=FieldName.TARGET,
-                    axis=None,
-                ),
+                # AsNumpyArray(
+                #     field=FieldName.TARGET,
+                #     expected_ndim=self.expected_ndim,
+                # ),
+                # ExpandDimArray(
+                #     field=FieldName.TARGET,
+                #     axis=None,
+                # ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -124,16 +124,16 @@ class ProbTSDataset:
                     time_features=time_features,
                     pred_length=self.prediction_length,
                 ),
-                VstackFeatures(
-                    output_field=FieldName.FEAT_TIME,
-                    input_fields=[FieldName.FEAT_TIME],
-                ),
+                # VstackFeatures(
+                #     output_field=FieldName.FEAT_TIME,
+                #     input_fields=[FieldName.FEAT_TIME],
+                # ),
                 SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
                 ),
-                AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
+                # AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
             ]
         )
 
