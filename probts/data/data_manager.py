@@ -1,24 +1,17 @@
 from typing import Union
 
-import torch
 import numpy as np
+import torch
 from gluonts.dataset.repository import dataset_names
+
+from probts.utils.constant import PROBTS_DATA_KEYS
 
 from .ltsf_datasets import LongTermTSDatasetLoader
 from .stsf_datasets import GluonTSDatasetLoader
 
 
 class ProbTSBatchData:
-    input_names_ = [
-        "target_dimension_indicator",
-        "past_time_feat",
-        "past_target_cdf",
-        "past_observed_values",
-        "past_is_pad",
-        "future_time_feat",
-        "future_target_cdf",
-        "future_observed_values",
-    ]
+    input_names_ = PROBTS_DATA_KEYS
 
     def __init__(self, data_dict, device):
         self.__dict__.update(data_dict)
@@ -81,32 +74,40 @@ class DataManager:
         # self.split_val = split_val
         # self.test_sampling = test_sampling
 
+        probts_dataset_args = [
+            path,
+            context_length,
+            history_length,
+            prediction_length,
+            scaler,
+            var_specific_norm,
+            test_rolling_length,
+        ]
+        short_term_specific_args = {"context_length_factor": context_length_factor}
+        long_term_specific_args = {"timeenc": timeenc}
+
         if isinstance(datasets, str):
             dataset = datasets
             if dataset in dataset_names:  # Use gluonts to load short-term datasets.
                 print("Loading Short-term Datasets: {dataset}".format(dataset=dataset))
                 dataset_class = GluonTSDatasetLoader
+                specific_args = short_term_specific_args
 
             else:  # Load long-term datasets.
                 print("Loading Long-term Datasets: {dataset}".format(dataset=dataset))
                 dataset_class = LongTermTSDatasetLoader
+                specific_args = long_term_specific_args
 
             probts_dataset = dataset_class(
-                ProbTSBatchData.input_names_,
-                context_length,
-                history_length,
-                prediction_length,
                 dataset,
-                path,
-                scaler,
-                var_specific_norm,
-                context_length_factor=context_length_factor,
-                timeenc=timeenc,
+                *probts_dataset_args,
+                **specific_args,
             )
-            self.global_mean = probts_dataset.global_mean
             self.train_iter_dataset = probts_dataset.get_iter_dataset(mode="train")
             self.val_iter_dataset = probts_dataset.get_iter_dataset(mode="val")
             self.test_iter_dataset = probts_dataset.get_iter_dataset(mode="test")
+
+            self.global_mean = probts_dataset.global_mean
             self.time_feat_dim = probts_dataset.time_feat_dim
             self.freq = probts_dataset.freq
             self.context_length = probts_dataset.context_length
@@ -121,37 +122,40 @@ class DataManager:
             )
             if scaler == "standard":
                 print(f"variate-specific normalization: {var_specific_norm}")
-        else: # Load multiple datasets
+        else:  # Load multiple datasets
             probts_dataset_list = []
             for dataset in datasets:
                 if dataset in dataset_names:  # Use gluonts to load short-term datasets.
-                    print("Loading Short-term Datasets: {dataset}".format(dataset=dataset))
+                    print(
+                        "Loading Short-term Datasets: {dataset}".format(dataset=dataset)
+                    )
                     dataset_class = GluonTSDatasetLoader
+                    specific_args = short_term_specific_args
 
                 else:  # Load long-term datasets.
-                    print("Loading Long-term Datasets: {dataset}".format(dataset=dataset))
+                    print(
+                        "Loading Long-term Datasets: {dataset}".format(dataset=dataset)
+                    )
                     dataset_class = LongTermTSDatasetLoader
+                    specific_args = long_term_specific_args
 
                 probts_dataset = dataset_class(
-                    ProbTSBatchData.input_names_,
-                    context_length,
-                    history_length,
-                    prediction_length,
                     dataset,
-                    path,
-                    scaler,
-                    var_specific_norm,
-                    context_length_factor=context_length_factor,
-                    timeenc=timeenc,
+                    *probts_dataset_args,
+                    **specific_args,
                 )
                 probts_dataset_list.append(probts_dataset)
             self.probts_dataset_list = probts_dataset_list
             self.train_iter_dataset = self.get_iter_multi_dataset(mode="train")
             self.val_iter_dataset = self.get_iter_multi_dataset(mode="val")
             self.test_iter_dataset = self.get_iter_multi_dataset(mode="test")
-            
+
     def get_iter_multi_dataset(self, mode):
-        assert mode in ["train", "val", "test"], "Mode should be 'train', 'val', or 'test'."
+        assert mode in [
+            "train",
+            "val",
+            "test",
+        ], "Mode should be 'train', 'val', or 'test'."
 
         iterables = []
         for probts_dataset in self.probts_dataset_list:
@@ -162,7 +166,9 @@ class DataManager:
             elif mode == "test":
                 iterables.append(probts_dataset.get_iter_dataset(mode="test"))
 
-        probabilities = np.array([1/len(self.probts_dataset_list)] * len(self.probts_dataset_list))
+        probabilities = np.array(
+            [1 / len(self.probts_dataset_list)] * len(self.probts_dataset_list)
+        )
         print(probabilities)
         iterators = [iter(iterable) for iterable in iterables]
 

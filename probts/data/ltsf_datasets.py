@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import dataclass, field
 
 import torch
 from gluonts.dataset.common import ListDataset
@@ -10,30 +11,14 @@ from .time_features import get_lags
 from .utils import get_LTSF_borders, get_LTSF_Dataset, get_LTSF_info
 
 
+@dataclass
 class LongTermTSDatasetLoader(ProbTSDataset):
-    def __init__(
-        self,
-        input_names: list,
-        context_length: int,
-        history_length: int,
-        prediction_length: int,
-        dataset: str,
-        path: str,
-        scaler: str,
-        var_specific_norm: bool,
-        **kwargs,
-    ):
-        super().__init__(
-            input_names,
-            context_length,
-            history_length,
-            prediction_length,
-            scaler,
-            var_specific_norm,
-        )
+    timeenc: int = field(default=1)
 
-        self.timeenc = kwargs.get("timeenc", 1)
-        self.__read_data(dataset, path)
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.__read_data(self.dataset, self.path)
 
         train_data = self.dataset_raw[: self.border_end[0]]
         val_data = self.dataset_raw[: self.border_end[1]]

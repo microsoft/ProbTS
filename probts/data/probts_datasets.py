@@ -1,3 +1,6 @@
+from dataclasses import dataclass, field
+from typing import List
+
 from gluonts.dataset.common import Dataset
 from gluonts.dataset.field_names import FieldName
 from gluonts.env import env
@@ -22,6 +25,7 @@ from gluonts.transform import (
 from torch.utils.data import IterableDataset
 
 from probts.utils import IdentityScaler, StandardScaler, TemporalScaler
+from probts.utils.constant import PROBTS_DATA_KEYS
 
 from .time_features import (
     AddCustomizedTimeFeatures,
@@ -45,29 +49,24 @@ class TransformedIterableDataset(IterableDataset):
         return iter(self.transformed_dataset)
 
 
+@dataclass
 class ProbTSDataset:
-    def __init__(
-        self,
-        input_names: list,
-        context_length: int,
-        history_length: int,
-        prediction_length: int,
-        scaler: str = "none",
-        var_specific_norm: bool = True,
-        test_rolling_length: int = 96,
-    ):
-        self.freq = None
+    dataset: str
+    path: str
+    context_length: int
+    history_length: int
+    prediction_length: int
+    scaler: str = "none"
+    var_specific_norm: bool = True,
+    test_rolling_length: int = 96,
 
-        self.input_names_ = input_names
-        self.context_length = context_length
-        self.history_length = history_length
-        self.prediction_length = prediction_length
-        self.expected_ndim = 2  # default to multivariate
-        self.test_rolling_length = test_rolling_length
+    input_names_: List[str] = field(default_factory=lambda: PROBTS_DATA_KEYS, init=False)
+    expected_ndim: int = field(default=2, init=False)
 
-        if scaler == "standard":
-            self.scaler = StandardScaler(var_specific=var_specific_norm)
-        elif scaler == "temporal":
+    def __post_init__(self):
+        if self.scaler == "standard":
+            self.scaler = StandardScaler(var_specific=self.var_specific_norm)
+        elif self.scaler == "temporal":
             self.scaler = TemporalScaler()
         else:
             self.scaler = IdentityScaler()

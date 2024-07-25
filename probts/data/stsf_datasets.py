@@ -6,6 +6,7 @@
 # ---------------------------------------------------------------------------------
 
 from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import torch
@@ -28,35 +29,20 @@ MULTI_VARIATE_DATASETS = [
 ]
 
 
+@dataclass
 class GluonTSDatasetLoader(ProbTSDataset):
-    def __init__(
-        self,
-        input_names: list,
-        context_length: int,
-        history_length: int,
-        prediction_length: int,
-        dataset: str,
-        path: str,
-        scaler: str,
-        var_specific_norm: bool,
-        **kwargs,
-    ):
-        super().__init__(
-            input_names,
-            context_length,
-            history_length,
-            prediction_length,
-            scaler,
-            var_specific_norm,
-        )
-        self.context_length_factor = kwargs.get("context_length_factor", 1)
+    context_length_factor: int = field(default=1)
+
+    def __post_init__(self):
+        super().__post_init__()
+
         multivariate = True
         split_val = True
 
-        self.__read_data(dataset, path)
+        self.__read_data(self.dataset, self.path)
         # self.prepare_STSF_dataset(dataset)
 
-        if dataset in MULTI_VARIATE_DATASETS:
+        if self.dataset in MULTI_VARIATE_DATASETS:
             self.num_test_dates = int(
                 len(self.dataset_raw.test) / len(self.dataset_raw.train)
             )
