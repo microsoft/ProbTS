@@ -1,10 +1,9 @@
 from typing import Union
 
-import numpy as np
 import torch
 from gluonts.dataset.repository import dataset_names
 
-from probts.utils.constant import PROBTS_DATA_KEYS
+from probts.utils.constant import PROBTS_DATA_KEYS, DATA_TO_FORECASTER_ARGS, DATA_TO_MODEL_ARGS
 
 from .ltsf_datasets import LongTermTSDatasetLoader
 from .stsf_datasets import GluonTSDatasetLoader
@@ -108,15 +107,11 @@ class DataManager:
             self.val_iter_dataset = probts_dataset.get_iter_dataset(mode="val")
             self.test_iter_dataset = probts_dataset.get_iter_dataset(mode="test")
 
-            self.global_mean = probts_dataset.global_mean
-            self.time_feat_dim = probts_dataset.time_feat_dim
-            self.freq = probts_dataset.freq
-            self.context_length = probts_dataset.context_length
-            self.history_length = probts_dataset.history_length
-            self.prediction_length = probts_dataset.prediction_length
-            self.lags_list = probts_dataset.lags_list
-            self.target_dim = probts_dataset.target_dim
-            self.scaler = probts_dataset.scaler
+            for key in DATA_TO_FORECASTER_ARGS + DATA_TO_MODEL_ARGS:
+                if key not in self.__dict__ or self.__dict__[key] is None:
+                    assert key in probts_dataset.__dict__, f"{key} not in probts_dataset"
+                    assert probts_dataset.__dict__[key] is not None, f"{key} is None"
+                    setattr(self, key, getattr(probts_dataset, key))
 
             print(
                 f"context_length: {self.context_length}, prediction_length: {self.prediction_length}"
@@ -151,6 +146,14 @@ class DataManager:
             self.train_iter_dataset = self.__get_iter_multi_dataset(mode="train")
             self.val_iter_dataset = self.__get_iter_multi_dataset(mode="val")
             self.test_iter_dataset = self.__get_iter_multi_dataset(mode="test")
+
+            for key in DATA_TO_FORECASTER_ARGS + DATA_TO_MODEL_ARGS:
+                if key not in self.__dict__ or self.__dict__[key] is None:
+                    for probts_dataset in probts_dataset_list:
+                        assert key in probts_dataset.__dict__, f"{key} not in probts_dataset"
+                        assert probts_dataset.__dict__[key] is not None, f"{key} is None"
+                    setattr(self, key, [getattr(probts_dataset, key) for probts_dataset in probts_dataset_list])
+
 
     def __get_iter_multi_dataset(self, mode):
         return MultiIterableDataset(self.probts_dataset_list, mode)

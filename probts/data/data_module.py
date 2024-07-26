@@ -20,7 +20,7 @@ class ProbTSDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["data_manager"])
 
     def setup(self, stage: str):
         self.dataset_train = self.data_manager.train_iter_dataset
