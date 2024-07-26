@@ -51,25 +51,25 @@ class GluonTSDatasetLoader(ProbTSDataset):
             test_grouper = MultivariateGrouper(
                 num_test_dates=self.num_test_dates, max_target_dim=int(self.target_dim)
             )
-            train_set = train_grouper(self.dataset_raw.train)
-            test_set = test_grouper(self.dataset_raw.test)
-            self.scaler.fit(torch.tensor(train_set[0]["target"].transpose(1, 0)))
-            self.global_mean = torch.mean(torch.tensor(train_set[0]["target"]), dim=-1)
+            self.train_set = train_grouper(self.dataset_raw.train)
+            self.test_set = test_grouper(self.dataset_raw.test)
+            self.scaler.fit(torch.tensor(self.train_set[0]["target"].transpose(1, 0)))
+            self.global_mean = torch.mean(torch.tensor(self.train_set[0]["target"]), dim=-1)
         else:
             self.target_dim = 1
             multivariate = False
             self.num_test_dates = 1
             self.train_set = self.dataset_raw.train
             self.test_set = self.dataset_raw.test
-            self.test_set = self.truncate_test(test_set)
+            self.test_set = self.truncate_test(self.test_set)
             self.global_mean = torch.mean(
                 torch.tensor(self.train_set[0]["target"]), dim=-1
             )  # TODO: check this
 
         if split_val:
-            self.train_set, self.val_set = self.split_train_val(train_set)
+            self.train_set, self.val_set = self.split_train_val(self.train_set)
         else:
-            self.val_set = test_set
+            self.val_set = self.test_set
 
         if multivariate:
             self.expected_ndim = 2
