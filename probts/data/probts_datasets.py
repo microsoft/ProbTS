@@ -9,9 +9,7 @@ from gluonts.itertools import Cyclic
 from gluonts.transform import (
     AddObservedValuesIndicator,
     AddTimeFeatures,
-    AsNumpyArray,
     Chain,
-    ExpandDimArray,
     ExpectedNumInstanceSampler,
     InstanceSplitter,
     RenameFields,
@@ -21,7 +19,7 @@ from gluonts.transform import (
     Transformation,
     TransformedDataset,
     ValidationSplitSampler,
-    VstackFeatures,
+    SampleTargetDim,
 )
 from torch.utils.data import IterableDataset
 
@@ -39,7 +37,6 @@ class TransformedIterableDataset(IterableDataset):
         self, dataset: Dataset, transform: Transformation, is_train: bool = True
     ):
         super().__init__()
-
         self.transformed_dataset = TransformedDataset(
             Cyclic(dataset) if is_train else dataset,
             transform,
@@ -53,6 +50,7 @@ class TransformedIterableDataset(IterableDataset):
 class MultiIterableDataset(IterableDataset):
     def __init__(self, probts_dataset_list, mode):
         super().__init__()
+        self.n_samples = 0
         assert mode in [
             "train",
             "val",
@@ -73,6 +71,8 @@ class MultiIterableDataset(IterableDataset):
 
     def __next__(self):
         idx = np.random.choice(len(self.iterators), p=self.probabilities)
+        self.n_samples += 1
+        print("current idx: ", idx, "total samples: ", self.n_samples)
         try:
             return next(self.iterators[idx])
         except StopIteration:
@@ -90,6 +90,7 @@ class ProbTSDataset:
     scaler: str = "none"
     var_specific_norm: bool = (True,)
     test_rolling_length: int = (96,)
+    is_pretrain: bool = False
 
     input_names_: List[str] = field(
         default_factory=lambda: PROBTS_DATA_KEYS, init=False
@@ -137,14 +138,6 @@ class ProbTSDataset:
 
         return Chain(
             [
-                # AsNumpyArray(
-                #     field=FieldName.TARGET,
-                #     expected_ndim=self.expected_ndim,
-                # ),
-                # ExpandDimArray(
-                #     field=FieldName.TARGET,
-                #     axis=None,
-                # ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
                     output_field=FieldName.OBSERVED_VALUES,
@@ -156,16 +149,11 @@ class ProbTSDataset:
                     time_features=time_features,
                     pred_length=self.prediction_length,
                 ),
-                # VstackFeatures(
-                #     output_field=FieldName.FEAT_TIME,
-                #     input_fields=[FieldName.FEAT_TIME],
-                # ),
                 SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
                     field_name="target_dimension_indicator",
                     target_field=FieldName.TARGET,
                 ),
-                # AsNumpyArray(field=FieldName.FEAT_STATIC_CAT, expected_ndim=1),
             ]
         )
 
@@ -191,13 +179,6 @@ class ProbTSDataset:
                 FieldName.FEAT_TIME,
                 FieldName.OBSERVED_VALUES,
             ],
-        ) + (
-            RenameFields(
-                {
-                    f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
-                    f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
-                }
-            )
         )
 
     def get_iter_dataset(
@@ -214,9 +195,39 @@ class ProbTSDataset:
 
         input_names = self.input_names_
 
+        rename_fields = RenameFields(
+            {
+                f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
+                f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
+            }
+        )
+
+        if self.is_pretrain:
+            sample_target_dim = SampleTargetDim(
+                field_name="target_dimension_indicator",
+                target_field=FieldName.TARGET,
+                observed_values_field=FieldName.OBSERVED_VALUES,
+                num_samples=1,  # univaraite time-series in pretraining
+                shuffle=True,
+            )
+            all_transforms = (
+                transform
+                + instance_splitter
+                + sample_target_dim
+                + rename_fields
+                + SelectFields(input_names)
+            )
+        else:
+            all_transforms = (
+                transform
+                + instance_splitter
+                + rename_fields
+                + SelectFields(input_names)
+            )
+
         iter_dataset = TransformedIterableDataset(
             dataset,
-            transform=transform + instance_splitter + SelectFields(input_names),
+            transform=all_transforms,
             is_train=True if mode == "train" else False,
         )
 

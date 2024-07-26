@@ -67,6 +67,7 @@ class DataManager:
         context_length_factor: int = 1,
         timeenc: int = 1,
         var_specific_norm: bool = True,
+        is_pretrain: bool = False,
     ):
         self.dataset = dataset
         # self.test_rolling_length = test_rolling_length
@@ -82,6 +83,7 @@ class DataManager:
             scaler,
             var_specific_norm,
             test_rolling_length,
+            is_pretrain,
         ]
         short_term_specific_args = {"context_length_factor": context_length_factor}
         long_term_specific_args = {"timeenc": timeenc}
