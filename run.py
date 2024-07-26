@@ -28,11 +28,11 @@ class ProbTSCli(LightningCLI):
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
-        for arg in self.data_to_forecaster_link_args:
+        for arg in self.data_to_model_link_args:
             parser.link_arguments(
                 f"data.data_manager.{arg}", f"model.{arg}", apply_on="instantiate"
             )
-        for arg in self.data_to_model_link_args:
+        for arg in self.data_to_forecaster_link_args:
             parser.link_arguments(
                 f"data.data_manager.{arg}",
                 f"model.forecaster.init_args.{arg}",
