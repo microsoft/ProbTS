@@ -8,6 +8,7 @@ from probts.utils.constant import PROBTS_DATA_KEYS
 
 from .ltsf_datasets import LongTermTSDatasetLoader
 from .stsf_datasets import GluonTSDatasetLoader
+from .probts_datasets import MultiIterableDataset
 
 
 class ProbTSBatchData:
@@ -55,7 +56,7 @@ class ProbTSBatchData:
 class DataManager:
     def __init__(
         self,
-        datasets: Union[str, list[str]],
+        dataset: Union[str, list[str]],
         path: str = "./datasets",
         history_length: int = None,
         context_length: int = None,
@@ -68,7 +69,7 @@ class DataManager:
         timeenc: int = 1,
         var_specific_norm: bool = True,
     ):
-        self.dataset = datasets
+        self.dataset = dataset
         # self.test_rolling_length = test_rolling_length
         self.global_mean = None
         # self.split_val = split_val
@@ -86,8 +87,8 @@ class DataManager:
         short_term_specific_args = {"context_length_factor": context_length_factor}
         long_term_specific_args = {"timeenc": timeenc}
 
-        if isinstance(datasets, str):
-            dataset = datasets
+        if isinstance(dataset, str) or len(dataset) == 1:
+            dataset = dataset if isinstance(dataset, str) else dataset[0]
             if dataset in dataset_names:  # Use gluonts to load short-term datasets.
                 print("Loading Short-term Datasets: {dataset}".format(dataset=dataset))
                 dataset_class = GluonTSDatasetLoader
@@ -123,8 +124,9 @@ class DataManager:
             if scaler == "standard":
                 print(f"variate-specific normalization: {var_specific_norm}")
         else:  # Load multiple datasets
+            dataset_list = dataset
             probts_dataset_list = []
-            for dataset in datasets:
+            for dataset in dataset_list:
                 if dataset in dataset_names:  # Use gluonts to load short-term datasets.
                     print(
                         "Loading Short-term Datasets: {dataset}".format(dataset=dataset)
@@ -146,37 +148,9 @@ class DataManager:
                 )
                 probts_dataset_list.append(probts_dataset)
             self.probts_dataset_list = probts_dataset_list
-            self.train_iter_dataset = self.get_iter_multi_dataset(mode="train")
-            self.val_iter_dataset = self.get_iter_multi_dataset(mode="val")
-            self.test_iter_dataset = self.get_iter_multi_dataset(mode="test")
+            self.train_iter_dataset = self.__get_iter_multi_dataset(mode="train")
+            self.val_iter_dataset = self.__get_iter_multi_dataset(mode="val")
+            self.test_iter_dataset = self.__get_iter_multi_dataset(mode="test")
 
-    def get_iter_multi_dataset(self, mode):
-        assert mode in [
-            "train",
-            "val",
-            "test",
-        ], "Mode should be 'train', 'val', or 'test'."
-
-        iterables = []
-        for probts_dataset in self.probts_dataset_list:
-            if mode == "train":
-                iterables.append(probts_dataset.get_iter_dataset(mode="train"))
-            elif mode == "val":
-                iterables.append(probts_dataset.get_iter_dataset(mode="val"))
-            elif mode == "test":
-                iterables.append(probts_dataset.get_iter_dataset(mode="test"))
-
-        probabilities = np.array(
-            [1 / len(self.probts_dataset_list)] * len(self.probts_dataset_list)
-        )
-        print(probabilities)
-        iterators = [iter(iterable) for iterable in iterables]
-
-        while True:
-            idx = np.random.choice(len(iterators), p=probabilities)
-            print(idx, self.dataset[idx])
-            try:
-                yield next(iterators[idx])
-            except StopIteration:
-                iterators[idx] = iter(iterables[idx])
-                yield next(iterators[idx])
+    def __get_iter_multi_dataset(self, mode):
+        return MultiIterableDataset(self.probts_dataset_list, mode)

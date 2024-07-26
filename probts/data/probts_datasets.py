@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
+import numpy as np
 from gluonts.dataset.common import Dataset
 from gluonts.dataset.field_names import FieldName
 from gluonts.env import env
@@ -49,6 +50,36 @@ class TransformedIterableDataset(IterableDataset):
         return iter(self.transformed_dataset)
 
 
+class MultiIterableDataset(IterableDataset):
+    def __init__(self, probts_dataset_list, mode):
+        super().__init__()
+        assert mode in [
+            "train",
+            "val",
+            "test",
+        ], "Mode should be 'train', 'val', or 'test'."
+        self.probts_dataset_list = probts_dataset_list
+        self.mode = mode
+        self.iterables = [
+            dataset.get_iter_dataset(mode=mode) for dataset in probts_dataset_list
+        ]
+        self.probabilities = np.array(
+            [1 / len(probts_dataset_list)] * len(probts_dataset_list)
+        )
+        self.iterators = [iter(iterable) for iterable in self.iterables]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        idx = np.random.choice(len(self.iterators), p=self.probabilities)
+        try:
+            return next(self.iterators[idx])
+        except StopIteration:
+            self.iterators[idx] = iter(self.iterables[idx])
+            return next(self.iterators[idx])
+
+
 @dataclass
 class ProbTSDataset:
     dataset: str
@@ -57,10 +88,12 @@ class ProbTSDataset:
     history_length: int
     prediction_length: int
     scaler: str = "none"
-    var_specific_norm: bool = True,
-    test_rolling_length: int = 96,
+    var_specific_norm: bool = (True,)
+    test_rolling_length: int = (96,)
 
-    input_names_: List[str] = field(default_factory=lambda: PROBTS_DATA_KEYS, init=False)
+    input_names_: List[str] = field(
+        default_factory=lambda: PROBTS_DATA_KEYS, init=False
+    )
     expected_ndim: int = field(default=2, init=False)
 
     def __post_init__(self):
