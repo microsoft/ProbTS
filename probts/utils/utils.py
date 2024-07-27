@@ -84,7 +84,7 @@ class StandardScaler(Scaler):
         
         values = values * (self.scale.to(values.device) + self.epsilon)
         values = values + self.mean.to(values.device)
-        return values
+        return values.to(torch.float32)
 
 
 class TemporalScaler(Scaler):
