@@ -1,17 +1,25 @@
 DATA_TO_FORECASTER_ARGS = [
-    "target_dim",
-    "history_length",
-    "context_length",
-    "prediction_length",
-    "lags_list",
-    "freq",
-    "time_feat_dim",
-    "global_mean",
-    "dataset",
+    "target_dim", # list if multi-dataset
+    # "history_length", # not sure yet
+    "context_length", # set to max
+    "prediction_length", # set to max of list
+    "lags_list", # list if multi-dataset (get from freq)
+    "freq", # list if multi-dataset (different freq for each dataset)
+    "time_feat_dim", # int
+    # "global_mean", # not sure yet
+    "dataset", 
 ]
 
 DATA_TO_MODEL_ARGS = [
+    "scaler", # list if multi-dataset
+]
+
+LIST_ARGS_PRETRAIN = [
     "scaler",
+    "target_dim",
+    "freq",
+    "dataset",
+    "lags_list",
 ]
 
 PROBTS_DATA_KEYS = [

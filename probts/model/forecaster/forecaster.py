@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import torch
 from torch import nn
@@ -12,17 +12,17 @@ class Forecaster(nn.Module):
         target_dim: int,
         context_length: int,
         prediction_length: int,
-        freq: str,
+        freq: Union[str, List[str]],
         use_lags: bool = False,
         use_feat_idx_emb: bool = False,
         use_time_feat: bool = False,
-        lags_list: List[int] = None,
         feat_idx_emb_dim: int = 1,
-        time_feat_dim: int = 1,
         use_scaling: bool = False,
         autoregressive: bool = False,
         no_training: bool = False,
-        dataset: str = None,
+        time_feat_dim: int = 1,
+        lags_list: Union[List[int], List[List]] = None,
+        dataset: Union[str, List[str]] = None,
         **kwargs,
     ):
         super().__init__()
@@ -48,9 +48,9 @@ class Forecaster(nn.Module):
             self.scaler = None
 
         self.lags_dim = len(self.lags_list) * target_dim
-        self.feat_idx_emb = nn.Embedding(
-            num_embeddings=self.target_dim, embedding_dim=self.feat_idx_emb_dim
-        )
+        # self.feat_idx_emb = nn.Embedding(
+        #     num_embeddings=self.target_dim, embedding_dim=self.feat_idx_emb_dim
+        # )
         self.input_size = self.get_input_size()
 
     @property

@@ -3,7 +3,7 @@ from typing import Union
 import torch
 from gluonts.dataset.repository import dataset_names
 
-from probts.utils.constant import PROBTS_DATA_KEYS, DATA_TO_FORECASTER_ARGS, DATA_TO_MODEL_ARGS
+from probts.utils.constant import PROBTS_DATA_KEYS, DATA_TO_FORECASTER_ARGS, DATA_TO_MODEL_ARGS, LIST_ARGS_PRETRAIN
 
 from .ltsf_datasets import LongTermTSDatasetLoader
 from .stsf_datasets import GluonTSDatasetLoader
@@ -154,8 +154,16 @@ class DataManager:
                     for probts_dataset in probts_dataset_list:
                         assert key in probts_dataset.__dict__, f"{key} not in probts_dataset"
                         assert probts_dataset.__dict__[key] is not None, f"{key} is None"
-                    setattr(self, key, [getattr(probts_dataset, key) for probts_dataset in probts_dataset_list])
+                    if key in LIST_ARGS_PRETRAIN:
+                        setattr(self, key, [getattr(probts_dataset, key) for probts_dataset in probts_dataset_list])
+                    else: # context_length, prediction_length, time_feat_dim
+                        setattr(self, key, max([getattr(probts_dataset, key) for probts_dataset in probts_dataset_list]))
 
+            self.target_dim = 1
 
     def __get_iter_multi_dataset(self, mode):
         return MultiIterableDataset(self.probts_dataset_list, mode)
+
+    def __str__(self):
+        dataset_str = ', '.join(self.dataset) if isinstance(self.dataset, list) else self.dataset
+        return f"data_{dataset_str}_ctx_{self.context_length}_pred_{self.prediction_length}"
