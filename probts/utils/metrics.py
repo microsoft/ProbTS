@@ -78,7 +78,10 @@ def calculate_seasonal_error(
 
     where m is the seasonal frequency. See [HA21]_ for more details.
     """
-    seasonality = get_seasonality(freq)
+    if isinstance(freq, list):
+        seasonality = 1
+    else:
+        seasonality = get_seasonality(freq)
 
     if seasonality < len(past_data):
         forecast_freq = seasonality
