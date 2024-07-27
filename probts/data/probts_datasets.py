@@ -50,7 +50,6 @@ class TransformedIterableDataset(IterableDataset):
 class MultiIterableDataset(IterableDataset):
     def __init__(self, probts_dataset_list, mode):
         super().__init__()
-        self.n_samples = 0
         assert mode in [
             "train",
             "val",
@@ -71,13 +70,16 @@ class MultiIterableDataset(IterableDataset):
 
     def __next__(self):
         idx = np.random.choice(len(self.iterators), p=self.probabilities)
-        self.n_samples += 1
-        print("current idx: ", idx, "total samples: ", self.n_samples)
         try:
-            return next(self.iterators[idx])
+            data = next(self.iterators[idx])
         except StopIteration:
-            self.iterators[idx] = iter(self.iterables[idx])
-            return next(self.iterators[idx])
+            if self.mode == "train":
+                self.iterators[idx] = iter(self.iterables[idx])
+                data = next(self.iterators[idx])
+            else:
+                raise StopIteration
+        data["dataset_idx"] = idx
+        return data
 
 
 @dataclass
