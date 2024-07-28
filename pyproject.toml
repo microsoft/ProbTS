@@ -67,3 +67,8 @@ tsfm = [
 
 [tool.setuptools]
 py-modules = []
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", 'probts'
+]
