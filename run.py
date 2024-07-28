@@ -11,6 +11,7 @@ from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 from probts.callbacks import MemoryCallback, TimeCallback
 from probts.data import ProbTSDataModule
 from probts.model.forecast_module import ProbTSForecastModule
+from probts.model.pretrain_module import ProbTSPretrainModule
 from probts.utils.constant import DATA_TO_FORECASTER_ARGS, DATA_TO_MODEL_ARGS
 
 warnings.filterwarnings("ignore")
@@ -43,9 +44,7 @@ class ProbTSCli(LightningCLI):
         config_args = self.parser.parse_args()
         self.tag = "_".join(
             [
-                self.datamodule.data_manager.dataset,
-                str(self.datamodule.data_manager.context_length),
-                str(self.datamodule.data_manager.prediction_length),
+                str(self.datamodule.data_manager),
                 self.model.forecaster.name,
                 str(config_args.seed_everything),
             ]
@@ -167,7 +166,8 @@ class ProbTSCli(LightningCLI):
 if __name__ == "__main__":
     cli = ProbTSCli(
         datamodule_class=ProbTSDataModule,
-        model_class=ProbTSForecastModule,
+        # model_class=ProbTSForecastModule,
+        model_class=ProbTSPretrainModule,
         save_config_kwargs={"overwrite": True},
         run=False,
     )
