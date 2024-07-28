@@ -1,5 +1,6 @@
 from probts.data import ProbTSBatchData
 from probts.model.probts_module import ProbTSBaseModule
+from einops import rearrange
 
 
 class ProbTSPretrainModule(ProbTSBaseModule):
@@ -42,7 +43,11 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         batch_data.future_target_cdf = self.batch_scaler_transform(
             batch_data.future_target_cdf, batch_ids
         )
+
+        # pretrain: multivaraite -> univariate
+        batch_data.past_target_cdf = rearrange(batch_data.past_target_cdf, 'b t c -> (b c) t 1')
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
+        forecasts = rearrange(forecasts, '(b c) s t 1 -> b s t c', b=len(batch_ids))
 
         # Calculate denorm metrics
         denorm_forecasts = self.batch_scaler_transform(
