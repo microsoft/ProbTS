@@ -31,7 +31,7 @@ class ProbTSPretrainModule(ProbTSBaseModule):
     def evaluate(self, batch, stage="", dataloader_idx=None):
         batch_data = ProbTSBatchData(batch, self.device)
         batch_size = batch_data.past_target_cdf.shape[0]
-        self.batch_size.append(batch_size)
+        # self.batch_size.append(batch_size)
 
         orin_past_data = batch_data.past_target_cdf[:]
         orin_future_data = batch_data.future_target_cdf[:]
@@ -54,7 +54,7 @@ class ProbTSPretrainModule(ProbTSBaseModule):
             past_data=orin_past_data,
             freq=self.forecaster.freq,
         )
-        self.update_metrics(metrics, stage)
+        self.metrics_dict = self.update_metrics(metrics, stage, target_dict=self.metrics_dict)
 
         # Calculate norm metrics
         norm_metrics = self.evaluator(
@@ -63,9 +63,26 @@ class ProbTSPretrainModule(ProbTSBaseModule):
             past_data=batch_data.past_target_cdf,
             freq=self.forecaster.freq,
         )
-        self.update_metrics(norm_metrics, stage, "norm")
-        return metrics
+        self.metrics_dict = self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.metrics_dict)
 
+        if stage == 'test':
+            if dataloader_idx is not None:
+                hor_str = str(self.forecaster.dataset[dataloader_idx])
+            # elif type(self.forecaster.prediction_length) == list:  # noqa: E721
+            #     hor_str = str(self.forecaster.prediction_length[0])
+            else:
+                hor_str = str(self.forecaster.dataset)
+            
+            if hor_str not in self.hor_metrics:
+                self.hor_metrics[hor_str] = {}
+            
+            self.hor_metrics[hor_str] = self.update_metrics(metrics, stage, target_dict=self.hor_metrics[hor_str])
+            self.hor_metrics[hor_str] = (self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.hor_metrics[hor_str]))
+            
+            # local_dict = {key: value[0] for key, value in self.hor_metrics[hor_str].items()}
+            # self.log_dict(local_dict, logger=True, on_epoch=True, prog_bar=True)
+            
+        return metrics
 
     def batch_scaler_transform(
         self,

@@ -56,6 +56,7 @@ class ProbTSCli(LightningCLI):
 
         if self.model.load_from_ckpt is not None:
             log.info(f"Loading pre-trained checkpoint from {self.model.load_from_ckpt}")
+            # TODO: use DATA_TO_FORECASTER_ARGS
             self.model = ProbTSPretrainModule.load_from_checkpoint(
                 self.model.load_from_ckpt,
                 learning_rate=config_args.model.learning_rate,
@@ -67,6 +68,7 @@ class ProbTSCli(LightningCLI):
                 lags_list=self.datamodule.data_manager.lags_list,
                 time_feat_dim=self.datamodule.data_manager.time_feat_dim,
                 no_training=self.model.forecaster.no_training,
+                dataset=self.datamodule.data_manager.dataset,
             )
 
         # Set callbacks
@@ -114,6 +116,7 @@ class ProbTSCli(LightningCLI):
         if not self.model.forecaster.no_training:
             self.ckpt = self.checkpoint_callback.best_model_path
             log.info(f"Loading best checkpoint from {self.ckpt}")
+            # TODO: use DATA_TO_FORECASTER_ARGS
             self.model = ProbTSPretrainModule.load_from_checkpoint(
                 self.ckpt,
                 scaler=self.datamodule.data_manager.scaler,
@@ -123,6 +126,7 @@ class ProbTSCli(LightningCLI):
                 prediction_length=self.datamodule.data_manager.prediction_length,
                 lags_list=self.datamodule.data_manager.lags_list,
                 time_feat_dim=self.datamodule.data_manager.time_feat_dim,
+                dataset=self.datamodule.data_manager.dataset,
             )
 
     def save_exp_summary(self):

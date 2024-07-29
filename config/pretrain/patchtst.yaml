@@ -4,7 +4,7 @@ trainer:
   accelerator: gpu
   devices: 1
   strategy: auto
-  max_epochs: 1
+  max_epochs: 100
   use_distributed_sampler: false
   limit_train_batches: 100
   log_every_n_steps: 1
@@ -29,7 +29,7 @@ data:
   data_manager:
     class_path: probts.data.data_manager.DataManager
     init_args:
-      dataset: [etth1, etth2]
+      dataset: [etth1,etth2]
       path: ./datasets
       split_val: true
       scaler: identity # identity, standard, temporal
@@ -37,5 +37,5 @@ data:
       prediction_length: 96
       is_pretrain: true
   batch_size: 32
-  test_batch_size: 32
+  test_batch_size: 16
   num_workers: 8
