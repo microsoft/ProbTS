@@ -54,11 +54,14 @@ class ProbTSDataModule(pl.LightningDataModule):
         )
 
     def combine_dataloader(self, dataset_dict):
-        dataloader_dict = {}
-        for dataset in dataset_dict:
-            dataloader_dict[dataset] = DataLoader(dataset_dict[dataset], batch_size=self.test_batch_size, num_workers=1)
-        combined_loader = CombinedLoader(dataloader_dict, mode="sequential")
-        return combined_loader
+        if isinstance(dataset_dict, list) or isinstance(dataset_dict, dict):
+            dataloader_dict = {}
+            for dataset in dataset_dict:
+                dataloader_dict[dataset] = DataLoader(dataset_dict[dataset], batch_size=self.test_batch_size, num_workers=1)
+            combined_loader = CombinedLoader(dataloader_dict, mode="sequential")
+            return combined_loader
+        else:
+            return DataLoader(dataset_dict, batch_size=self.test_batch_size, num_workers=1)
 
     # TODO: add collate_fn for univariate pretrain
     # def train_collate_fn(self, batch):

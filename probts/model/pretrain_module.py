@@ -13,10 +13,10 @@ class ProbTSPretrainModule(ProbTSBaseModule):
     def training_forward(self, batch_data):
         batch_ids = batch_data.dataset_idx
         batch_data.past_target_cdf = self.batch_scaler_transform(
-            batch_data.past_target_cdf, batch_ids
+            batch_data.past_target_cdf, batch_data.target_dimension_indicator, batch_ids
         )
         batch_data.future_target_cdf = self.batch_scaler_transform(
-            batch_data.future_target_cdf, batch_ids
+            batch_data.future_target_cdf, batch_data.target_dimension_indicator, batch_ids
         )
 
         loss = self.forecaster.loss(batch_data)
@@ -46,7 +46,7 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
         forecasts = rearrange(forecasts, '(b c) s t 1 -> b s t c', b=batch_size)
 
-        denorm_forecasts = scaler.transform(forecasts)
+        denorm_forecasts = scaler.inverse_transform(forecasts)
 
         metrics = self.evaluator(
             orin_future_data,
@@ -87,16 +87,17 @@ class ProbTSPretrainModule(ProbTSBaseModule):
     def batch_scaler_transform(
         self,
         batch_data,
+        batch_dimension_indicator,
         batch_ids,
         inverse=False,
-    ):
+    ): # TODO: support other scalers, now only IdentityScaler
         if isinstance(self.scaler, list):
             for i, scaler in enumerate(self.scaler):
                 mask = batch_ids == i
                 if inverse:
-                    batch_data[mask] = scaler.inverse_transform(batch_data[mask])
+                    batch_data[mask] = scaler.inverse_transform(batch_data[mask], batch_dimension_indicator[mask])
                 else:
-                    batch_data[mask] = scaler.transform(batch_data[mask])
+                    batch_data[mask] = scaler.transform(batch_data[mask], batch_dimension_indicator[mask])
         else:
             if inverse:
                 batch_data = self.scaler.inverse_transform(batch_data)

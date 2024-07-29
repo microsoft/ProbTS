@@ -8,8 +8,7 @@
 
 
 import torch
-import numpy as np
-from typing import Optional, Dict
+from typing import Optional
 
 
 class Scaler:
@@ -35,13 +34,13 @@ class StandardScaler(Scaler):
         mean: float = None,
         std: float = None,
         epsilon: float = 1e-9,
-        var_specific: bool = True
+        var_specific: bool = True,
     ):
         """
         The class can be used to normalize PyTorch Tensors using native functions. The module does not expect the
         tensors to be of any specific shape; as long as the features are the last dimension in the tensor, the module
         will work fine.
-        
+
         Args:
             mean: The mean of the features. The property will be set after a call to fit.
             std: The standard deviation of the features. The property will be set after a call to fit.
@@ -56,7 +55,7 @@ class StandardScaler(Scaler):
     def fit(self, values):
         """
         Args:
-            values: Input values should be a PyTorch tensor of shape (T, C) or (N, T, C), 
+            values: Input values should be a PyTorch tensor of shape (T, C) or (N, T, C),
                 where N is the batch size, T is the timesteps and C is the number of variates.
         """
         dims = list(range(values.dim() - 1))
@@ -67,32 +66,46 @@ class StandardScaler(Scaler):
             self.mean = torch.mean(values, dim=dims)
             self.scale = torch.std(values, dim=dims)
 
-    def transform(self, values):
+    def transform(self, values, dimensions=None):
         if self.mean is None:
             return values
 
-        values = (values - self.mean.to(values.device)) / (self.scale.to(values.device) + self.epsilon)
+        mean = self.mean.to(values.device)
+        scale = self.scale.to(values.device)
+        if (dimensions is None) or (not self.var_specific):
+            values = (values - mean) / (scale + self.epsilon)
+        else:
+            B, _, _ = values.shape
+            # Create a mean and scale tensor based on the dimensions
+            selected_mean = mean[dimensions.squeeze()].view(B, 1, 1)
+            selected_scale = scale[dimensions.squeeze()].view(B, 1, 1)
+            values = (values - selected_mean) / (selected_scale + self.epsilon)
         return values.to(torch.float32)
 
     def fit_transform(self, values):
         self.fit(values)
         return self.transform(values)
 
-    def inverse_transform(self, values):
+    def inverse_transform(self, values, dimensions=None):
         if self.mean is None:
             return values
-        
-        values = values * (self.scale.to(values.device) + self.epsilon)
-        values = values + self.mean.to(values.device)
+
+        mean = self.mean.to(values.device)
+        scale = self.scale.to(values.device)
+        if (dimensions is None) or (not self.var_specific):
+            values = values * (scale + self.epsilon)
+            values = values + mean
+        else:
+            B, _, _ = values.shape
+            selected_mean = mean[dimensions.squeeze()].view(B, 1, 1)
+            selected_scale = scale[dimensions.squeeze()].view(B, 1, 1)
+            values = values * (selected_scale + self.epsilon)
+            values = values + selected_mean
         return values.to(torch.float32)
 
 
 class TemporalScaler(Scaler):
-    def __init__(
-        self,
-        minimum_scale:float = 1e-10,
-        time_first: bool = True
-    ):
+    def __init__(self, minimum_scale: float = 1e-10, time_first: bool = True):
         """
         The ``TemporalScaler`` computes a per-item scale according to the average
         absolute value over time of each item. The average is computed only among
@@ -109,14 +122,10 @@ class TemporalScaler(Scaler):
         self.minimum_scale = torch.tensor(minimum_scale)
         self.time_first = time_first
 
-    def fit(
-        self,
-        data: torch.Tensor,
-        observed_indicator: torch.Tensor = None
-    ):
+    def fit(self, data: torch.Tensor, observed_indicator: torch.Tensor = None):
         """
         Fit the scaler to the data.
-        
+
         Args:
             data: tensor of shape (N, T, C) if ``time_first == True`` or (N, C, T)
                 if ``time_first == False`` containing the data to be scaled
@@ -174,16 +183,17 @@ class IdentityScaler(Scaler):
     """
     No scaling is applied upon calling the ``IdentityScaler``.
     """
+
     def __init__(self, time_first: bool = True):
         super().__init__()
         self.scale = None
-        
+
     def fit(self, data):
         pass
 
     def transform(self, data):
         return data
-    
+
     def inverse_transform(self, data):
         return data
 
@@ -199,9 +209,7 @@ def extract(a, t, x_shape):
 
 
 def weighted_average(
-    x: torch.Tensor,
-    weights: Optional[torch.Tensor] = None,
-    dim: int = None
+    x: torch.Tensor, weights: Optional[torch.Tensor] = None, dim: int = None
 ):
     """
     Computes the weighted average of a given tensor across a given dim, masking

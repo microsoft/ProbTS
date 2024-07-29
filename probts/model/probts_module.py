@@ -122,6 +122,7 @@ class ProbTSBaseModule(pl.LightningModule):
         else:
             self.avg_metrics = self.calculate_average(self.metrics_dict)
             # self.log_dict(self.avg_metrics, prog_bar=True)
+        # TODO: fix bug, log_dict not seperate dataloaders into multiple columns
         self.log_dict(self.avg_metrics, logger=True)
 
     def predict_step(self, batch, batch_idx):

@@ -29,13 +29,14 @@ data:
   data_manager:
     class_path: probts.data.data_manager.DataManager
     init_args:
-      dataset: [etth1,etth2]
+      dataset: [etth1, etth2]
       path: ./datasets
       split_val: true
-      scaler: identity # identity, standard, temporal
+      scaler: standard # identity, standard, temporal
       context_length: 96
       prediction_length: 96
       is_pretrain: true
+      var_specific_norm: False
   batch_size: 32
-  test_batch_size: 16
+  test_batch_size: 32
   num_workers: 8
