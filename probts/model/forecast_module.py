@@ -23,13 +23,13 @@ class ProbTSForecastModule(ProbTSBaseModule):
         self.log("train_loss", loss, on_step=True, prog_bar=True, logger=True)
         return loss
 
-    def evaluate(self, batch, stage=""):
+    def evaluate(self, batch, stage="", dataloader_idx=None):
         batch_data = ProbTSBatchData(batch, self.device)
         orin_past_data = batch_data.past_target_cdf[:]
         orin_future_data = batch_data.future_target_cdf[:]
         norm_past_data = self.scaler.transform(batch_data.past_target_cdf)
         norm_future_data = self.scaler.transform(batch_data.future_target_cdf)
-        self.batch_size.append(orin_past_data.shape[0])
+        # self.batch_size.append(orin_past_data.shape[0])
 
         # Forecast
         batch_data.past_target_cdf = self.scaler.transform(batch_data.past_target_cdf)
@@ -43,7 +43,7 @@ class ProbTSForecastModule(ProbTSBaseModule):
             past_data=orin_past_data,
             freq=self.forecaster.freq,
         )
-        self.update_metrics(metrics, stage)
+        self.metrics_dict = self.update_metrics(metrics, stage, target_dict=self.metrics_dict)
 
         # Calculate norm metrics
         norm_metrics = self.evaluator(
@@ -52,6 +52,6 @@ class ProbTSForecastModule(ProbTSBaseModule):
             past_data=norm_past_data,
             freq=self.forecaster.freq,
         )
-        self.update_metrics(norm_metrics, stage, "norm")
+        self.metrics_dict = self.update_metrics(norm_metrics, stage, "norm", target_dict=self.metrics_dict)
         return metrics
     
