@@ -90,7 +90,7 @@ class ProbTSBaseModule(pl.LightningModule):
         raise NotImplementedError
 
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
-        metrics = self.evaluate(batch, stage="val")
+        metrics = self.evaluate(batch, stage="val", dataloader_idx=dataloader_idx)
         return metrics
 
     def on_validation_epoch_start(self):
@@ -103,8 +103,8 @@ class ProbTSBaseModule(pl.LightningModule):
         )
         self.log_dict(avg_metrics, prog_bar=True)
 
-    def test_step(self, batch, batch_idx):
-        metrics = self.evaluate(batch, stage="test")
+    def test_step(self, batch, batch_idx, dataloader_idx=None):
+        metrics = self.evaluate(batch, stage="test", dataloader_idx=dataloader_idx)
         return metrics
 
     def on_test_epoch_start(self):
@@ -117,7 +117,7 @@ class ProbTSBaseModule(pl.LightningModule):
         )
         self.log_dict(avg_metrics, logger=True)
 
-    def predict_step(self, batch, batch_idx):
+    def predict_step(self, batch, batch_idx, dataloader_idx=None):
         batch_data = ProbTSBatchData(batch, self.device)
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
         return forecasts

@@ -162,7 +162,14 @@ class DataManager:
             self.target_dim = 1
 
     def __get_iter_multi_dataset(self, mode):
-        return MultiIterableDataset(self.probts_dataset_list, mode)
+        assert isinstance(self.dataset, list), "dataset should be a list if loading multiple datasets"
+        if mode == "train":
+            return MultiIterableDataset(self.probts_dataset_list, mode)
+        else:
+            multi_dataset = {}
+            for i, dataset in enumerate(self.dataset):
+                multi_dataset[dataset] = self.probts_dataset_list[i].get_iter_dataset(mode)
+            return multi_dataset
 
     def __str__(self):
         dataset_str = '-'.join(self.dataset) if isinstance(self.dataset, list) else self.dataset

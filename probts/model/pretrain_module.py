@@ -28,31 +28,26 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         self.log("train_loss", loss, on_step=True, prog_bar=True, logger=True)
         return loss
 
-    def evaluate(self, batch, stage=""):
+    def evaluate(self, batch, stage="", dataloader_idx=None):
         batch_data = ProbTSBatchData(batch, self.device)
+        batch_size = batch_data.past_target_cdf.shape[0]
+        self.batch_size.append(batch_size)
+
         orin_past_data = batch_data.past_target_cdf[:]
         orin_future_data = batch_data.future_target_cdf[:]
-
-        self.batch_size.append(orin_past_data.shape[0])
-
-        # Forecast
-        batch_ids = batch_data.dataset_idx
-        batch_data.past_target_cdf = self.batch_scaler_transform(
-            batch_data.past_target_cdf, batch_ids
-        )
-        batch_data.future_target_cdf = self.batch_scaler_transform(
-            batch_data.future_target_cdf, batch_ids
-        )
+  
+        assert dataloader_idx is not None
+        scaler = self.scaler[dataloader_idx]
+        batch_data.past_target_cdf = scaler.transform(batch_data.past_target_cdf)
+        batch_data.future_target_cdf = scaler.transform(batch_data.future_target_cdf)
 
         # pretrain: multivaraite -> univariate
         batch_data.past_target_cdf = rearrange(batch_data.past_target_cdf, 'b t c -> (b c) t 1')
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
-        forecasts = rearrange(forecasts, '(b c) s t 1 -> b s t c', b=len(batch_ids))
+        forecasts = rearrange(forecasts, '(b c) s t 1 -> b s t c', b=batch_size)
 
-        # Calculate denorm metrics
-        denorm_forecasts = self.batch_scaler_transform(
-            forecasts, batch_ids, inverse=True
-        )
+        denorm_forecasts = scaler.transform(forecasts)
+
         metrics = self.evaluator(
             orin_future_data,
             denorm_forecasts,
