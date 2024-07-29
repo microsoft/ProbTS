@@ -90,7 +90,7 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         batch_dimension_indicator,
         batch_ids,
         inverse=False,
-    ): # TODO: support other scalers, now only IdentityScaler
+    ): # TODO: support other scalers, now only IdentityScaler and StandardScaler
         if isinstance(self.scaler, list):
             for i, scaler in enumerate(self.scaler):
                 mask = batch_ids == i
