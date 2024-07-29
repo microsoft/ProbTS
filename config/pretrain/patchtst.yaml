@@ -4,7 +4,7 @@ trainer:
   accelerator: gpu
   devices: 1
   strategy: auto
-  max_epochs: 50
+  max_epochs: 1
   use_distributed_sampler: false
   limit_train_batches: 100
   log_every_n_steps: 1

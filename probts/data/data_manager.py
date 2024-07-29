@@ -165,5 +165,5 @@ class DataManager:
         return MultiIterableDataset(self.probts_dataset_list, mode)
 
     def __str__(self):
-        dataset_str = ', '.join(self.dataset) if isinstance(self.dataset, list) else self.dataset
+        dataset_str = '-'.join(self.dataset) if isinstance(self.dataset, list) else self.dataset
         return f"data_{dataset_str}_ctx_{self.context_length}_pred_{self.prediction_length}"

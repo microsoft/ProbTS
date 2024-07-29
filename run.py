@@ -10,7 +10,7 @@ from lightning.pytorch.loggers import CSVLogger, TensorBoardLogger
 
 from probts.callbacks import MemoryCallback, TimeCallback
 from probts.data import ProbTSDataModule
-from probts.model.forecast_module import ProbTSForecastModule
+# from probts.model.forecast_module import ProbTSForecastModule
 from probts.model.pretrain_module import ProbTSPretrainModule
 from probts.utils.constant import DATA_TO_FORECASTER_ARGS, DATA_TO_MODEL_ARGS
 
@@ -56,7 +56,7 @@ class ProbTSCli(LightningCLI):
 
         if self.model.load_from_ckpt is not None:
             log.info(f"Loading pre-trained checkpoint from {self.model.load_from_ckpt}")
-            self.model = ProbTSForecastModule.load_from_checkpoint(
+            self.model = ProbTSPretrainModule.load_from_checkpoint(
                 self.model.load_from_ckpt,
                 learning_rate=config_args.model.learning_rate,
                 scaler=self.datamodule.data_manager.scaler,
@@ -114,7 +114,7 @@ class ProbTSCli(LightningCLI):
         if not self.model.forecaster.no_training:
             self.ckpt = self.checkpoint_callback.best_model_path
             log.info(f"Loading best checkpoint from {self.ckpt}")
-            self.model = ProbTSForecastModule.load_from_checkpoint(
+            self.model = ProbTSPretrainModule.load_from_checkpoint(
                 self.ckpt,
                 scaler=self.datamodule.data_manager.scaler,
                 context_length=self.datamodule.data_manager.context_length,
