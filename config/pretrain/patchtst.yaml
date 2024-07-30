@@ -4,10 +4,10 @@ trainer:
   accelerator: gpu
   devices: 1
   strategy: auto
-  max_epochs: 100
+  max_epochs: 50
   use_distributed_sampler: false
-  limit_train_batches: 100
-  log_every_n_steps: 1
+  limit_train_batches: 400
+  log_every_n_steps: 5
   default_root_dir: ./exps
   accumulate_grad_batches: 4
 model:
@@ -29,11 +29,12 @@ data:
   data_manager:
     class_path: probts.data.data_manager.DataManager
     init_args:
-      dataset: [etth1, etth2]
+      dataset: [etth1, etth2, ettm1, ettm2]
       path: ./datasets
       split_val: true
-      scaler: standard # identity, standard, temporal
+      scaler: standard # identity, standard
       context_length: 96
+      history_length: 96 # needed for different freq dataset
       prediction_length: 96
       is_pretrain: true
       var_specific_norm: False
