@@ -8,7 +8,7 @@
 
 
 import torch
-from typing import Optional
+from typing import Optional, List
 
 
 class Scaler:
@@ -234,3 +234,20 @@ def weighted_average(
         ) / sum_weights
     else:
         return x.mean(dim=dim)
+
+
+def find_min_prediction_length(arr, x):
+    if x is None:
+        return x
+    for value in arr:
+        if value >= x:
+            return value
+    return None
+
+def get_unique_list(lst: List[List]) -> list:
+    # 使用集合去重
+    unique_set = set()
+    for sublist in lst:
+        unique_set.update(sublist)
+    # 将集合转换回列表
+    return list(unique_set)

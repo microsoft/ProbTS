@@ -99,10 +99,11 @@ class LongTermTSDatasetLoader(ProbTSDataset):
         dataset = ListDataset(datasets, freq=freq)
         return dataset
 
+    # TODO: add prediction_length as an argument
     def get_rolling_test(
         self, test_set, border_begin_idx, border_end_idx, rolling_length
     ):
-        if (border_end_idx - border_begin_idx - self.prediction_length) < 0:
+        if (border_end_idx - border_begin_idx - self.max_prediction_length) < 0:
             raise ValueError(
                 "The time steps in validation / testing set is less than prediction length."
             )
@@ -110,7 +111,7 @@ class LongTermTSDatasetLoader(ProbTSDataset):
         num_test_dates = (
             int(
                 (
-                    (border_end_idx - border_begin_idx - self.prediction_length)
+                    (border_end_idx - border_begin_idx - self.max_prediction_length)
                     / rolling_length
                 )
             )
@@ -122,7 +123,7 @@ class LongTermTSDatasetLoader(ProbTSDataset):
         rolling_test_seq_list = list()
         for i in range(num_test_dates):
             rolling_test_seq = deepcopy(test_set)
-            rolling_end = border_begin_idx + self.prediction_length + i * rolling_length
+            rolling_end = border_begin_idx + self.max_prediction_length + i * rolling_length
             rolling_test_seq[FieldName.TARGET] = rolling_test_seq[FieldName.TARGET][
                 :, :rolling_end
             ]

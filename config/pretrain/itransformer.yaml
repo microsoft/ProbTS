@@ -7,24 +7,27 @@ trainer:
   max_epochs: 50
   use_distributed_sampler: false
   limit_train_batches: 400
-  num_sanity_val_steps: 0
   log_every_n_steps: 1
   default_root_dir: ./exps
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 32
 model:
   forecaster:
-    class_path: probts.model.forecaster.point_forecaster.PatchTST
+    class_path: probts.model.forecaster.point_forecaster.Pretrain_iTransformer
     init_args:
-      stride: 8
-      patch_len: 16
-      dropout: 0.3
-      f_hidden_size: 16
-      n_layers: 3
-      n_heads: 4
-      fc_dropout: 0.2
-      head_dropout: 0
-      individual: true
-  learning_rate: 0.0001
+      factor: 1
+      n_heads: 8
+      activation: 'gelu'
+      e_layers: 2
+      output_attention: false
+      f_hidden_size: 256
+      d_ff: 256
+      label_len: 48
+      use_lags: false
+      use_feat_idx_emb: false
+      use_time_feat: false
+      feat_idx_emb_dim: 1
+  num_samples: 1
+  learning_rate: 1e-4
   quantiles_num: 20
 data:
   data_manager:
@@ -36,7 +39,7 @@ data:
       scaler: standard # identity, standard
       context_length: 96
       history_length: 96 # needed for different freq dataset
-      prediction_length: [[96, 192], [96]]
+      prediction_length: [[96, 192, 336, 720], [96, 192, 336, 720]]
       is_pretrain: true
       var_specific_norm: False
   batch_size: 32

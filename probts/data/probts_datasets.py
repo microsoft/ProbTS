@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Union
+import itertools
 
 import numpy as np
 from gluonts.dataset.common import Dataset
 from gluonts.dataset.field_names import FieldName
-from gluonts.env import env
 from gluonts.itertools import Cyclic
 from gluonts.transform import (
     AddObservedValuesIndicator,
@@ -20,11 +20,13 @@ from gluonts.transform import (
     TransformedDataset,
     ValidationSplitSampler,
     SampleTargetDim,
+    Identity,
 )
 from torch.utils.data import IterableDataset
 
 from probts.utils import IdentityScaler, StandardScaler, TemporalScaler
 from probts.utils.constant import PROBTS_DATA_KEYS
+from probts.data.multi_horizon_sampler import MultiHorizonSplitter
 
 from .time_features import (
     AddCustomizedTimeFeatures,
@@ -60,10 +62,9 @@ class MultiIterableDataset(IterableDataset):
         self.iterables = [
             dataset.get_iter_dataset(mode=mode) for dataset in probts_dataset_list
         ]
-        self.probabilities = np.array(
-            [1 / len(probts_dataset_list)] * len(probts_dataset_list)
-        )
+        self.iterables = list(itertools.chain(*self.iterables))
         self.iterators = [iter(iterable) for iterable in self.iterables]
+        self.probabilities = np.array([1 / len(self.iterables)] * len(self.iterables))
 
     def __iter__(self):
         return self
@@ -88,10 +89,10 @@ class ProbTSDataset:
     path: str
     context_length: int
     history_length: int
-    prediction_length: int
+    prediction_length: Union[int, List[int], List[List[int]]]
     scaler: str = "none"
-    var_specific_norm: bool = (True,)
-    test_rolling_length: int = (96,)
+    var_specific_norm: bool = True
+    test_rolling_length: int = 96
     is_pretrain: bool = False
 
     input_names_: List[str] = field(
@@ -107,22 +108,30 @@ class ProbTSDataset:
         else:
             self.scaler = IdentityScaler()
 
+        # handle multiple prediction lengths
+        if isinstance(self.prediction_length, list):  # list of int, [96, 192]
+            # TODO: add prediction length sample for pretrain
+            self.prediction_length_list = self.prediction_length
+            self.max_prediction_length = int(max(self.prediction_length))
+        else:
+            self.max_prediction_length = int(self.prediction_length)
+
     def __get_sampler(self):
         self.train_sampler = ExpectedNumInstanceSampler(
             num_instances=1.0,
             min_instances=1,
             min_past=self.history_length,
-            min_future=self.prediction_length,
+            min_future=self.max_prediction_length,
         )
 
         self.val_sampler = ValidationSplitSampler(
             min_past=self.history_length,
-            min_future=self.prediction_length,
+            min_future=self.max_prediction_length,
         )
 
         self.test_sampler = ValidationSplitSampler(
             min_past=self.history_length,
-            min_future=self.prediction_length,
+            min_future=self.max_prediction_length,
         )
 
     def __create_transformation(self, data_stamp=None) -> Transformation:
@@ -149,7 +158,7 @@ class ProbTSDataset:
                     target_field=FieldName.TARGET,
                     output_field=FieldName.FEAT_TIME,
                     time_features=time_features,
-                    pred_length=self.prediction_length,
+                    pred_length=self.max_prediction_length,
                 ),
                 SetFieldIfNotPresent(field=FieldName.FEAT_STATIC_CAT, value=[0]),
                 TargetDimIndicator(
@@ -159,7 +168,7 @@ class ProbTSDataset:
             ]
         )
 
-    def __create_instance_splitter(self, mode: str):
+    def __create_instance_splitter(self, mode: str, pred_len: int):
         assert mode in ["train", "val", "test"]
 
         self.__get_sampler()
@@ -169,40 +178,56 @@ class ProbTSDataset:
             "test": self.test_sampler,
         }[mode]
 
-        return InstanceSplitter(
-            target_field=FieldName.TARGET,
-            is_pad_field=FieldName.IS_PAD,
-            start_field=FieldName.START,
-            forecast_start_field=FieldName.FORECAST_START,
-            instance_sampler=instance_sampler,
-            past_length=self.history_length,
-            future_length=self.prediction_length,
-            time_series_fields=[
-                FieldName.FEAT_TIME,
-                FieldName.OBSERVED_VALUES,
-            ],
-        )
+        # if False:
+        if self.is_pretrain:
+            if self.prediction_length_list is not None and mode == "train":
+                instance_splitter = MultiHorizonSplitter(
+                    target_field=FieldName.TARGET,
+                    is_pad_field=FieldName.IS_PAD,
+                    start_field=FieldName.START,
+                    forecast_start_field=FieldName.FORECAST_START,
+                    instance_sampler=instance_sampler,
+                    past_length=[self.history_length],
+                    future_length=self.prediction_length_list,
+                    time_series_fields=[
+                        FieldName.FEAT_TIME,
+                        FieldName.OBSERVED_VALUES,
+                    ],
+                )
+            else:
+                instance_splitter = InstanceSplitter(
+                    target_field=FieldName.TARGET,
+                    is_pad_field=FieldName.IS_PAD,
+                    start_field=FieldName.START,
+                    forecast_start_field=FieldName.FORECAST_START,
+                    instance_sampler=instance_sampler,
+                    past_length=self.history_length,
+                    future_length=pred_len,
+                    time_series_fields=[
+                        FieldName.FEAT_TIME,
+                        FieldName.OBSERVED_VALUES,
+                    ],
+                )
+        else:
+            instance_splitter = InstanceSplitter(
+                target_field=FieldName.TARGET,
+                is_pad_field=FieldName.IS_PAD,
+                start_field=FieldName.START,
+                forecast_start_field=FieldName.FORECAST_START,
+                instance_sampler=instance_sampler,
+                past_length=self.history_length,
+                future_length=self.prediction_length,
+                time_series_fields=[
+                    FieldName.FEAT_TIME,
+                    FieldName.OBSERVED_VALUES,
+                ],
+            )
+        return instance_splitter
 
     def get_iter_dataset(
         self, dataset: Dataset, mode: str, data_stamp=None
     ) -> IterableDataset:
         assert mode in ["train", "val", "test"]
-
-        transform = self.__create_transformation(data_stamp)
-        if mode == "train":
-            with env._let(max_idle_transforms=100):
-                instance_splitter = self.__create_instance_splitter(mode)
-        else:
-            instance_splitter = self.__create_instance_splitter(mode)
-
-        input_names = self.input_names_
-
-        rename_fields = RenameFields(
-            {
-                f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
-                f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
-            }
-        )
 
         if self.is_pretrain:
             sample_target_dim = SampleTargetDim(
@@ -212,25 +237,48 @@ class ProbTSDataset:
                 num_samples=1,  # univaraite time-series in pretraining
                 shuffle=True,
             )
-            all_transforms = (
-                transform
-                + instance_splitter
-                + sample_target_dim
-                + rename_fields
-                + SelectFields(input_names)
-            )
         else:
-            all_transforms = (
-                transform
-                + instance_splitter
-                + rename_fields
-                + SelectFields(input_names)
-            )
+            sample_target_dim = Identity()
 
-        iter_dataset = TransformedIterableDataset(
-            dataset,
-            transform=all_transforms,
-            is_train=True if mode == "train" else False,
+        rename_fields = RenameFields(
+            {
+                f"past_{FieldName.TARGET}": f"past_{FieldName.TARGET}_cdf",
+                f"future_{FieldName.TARGET}": f"future_{FieldName.TARGET}_cdf",
+            }
         )
 
-        return iter_dataset
+        if self.prediction_length_list is not None:
+            iter_dataset_list = []
+            for pred_len in self.prediction_length_list:
+                all_transforms = (
+                    self.__create_transformation(data_stamp)
+                    + self.__create_instance_splitter(mode, pred_len)
+                    + sample_target_dim
+                    + rename_fields
+                    + SelectFields(self.input_names_)
+                )
+
+                iter_dataset = TransformedIterableDataset(
+                    dataset,
+                    transform=all_transforms,
+                    is_train=True if mode == "train" else False,
+                )
+                iter_dataset_list.append(iter_dataset)
+            return iter_dataset_list
+
+        else:
+            all_transforms = (
+                self.__create_transformation(data_stamp)
+                + self.__create_instance_splitter(mode, pred_len)
+                + sample_target_dim
+                + rename_fields
+                + SelectFields(self.input_names_)
+            )
+
+            iter_dataset = TransformedIterableDataset(
+                dataset,
+                transform=all_transforms,
+                is_train=True if mode == "train" else False,
+            )
+
+            return iter_dataset

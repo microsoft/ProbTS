@@ -1,14 +1,19 @@
+from typing import Callable
+
+from einops import rearrange
+
 from probts.data import ProbTSBatchData
 from probts.model.probts_module import ProbTSBaseModule
-from einops import rearrange
 
 
 class ProbTSPretrainModule(ProbTSBaseModule):
     def __init__(
         self,
+        dataloader_id_mapper: Callable = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.mapper = dataloader_id_mapper
 
     def training_forward(self, batch_data):
         batch_ids = batch_data.dataset_idx
@@ -29,15 +34,17 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         return loss
 
     def evaluate(self, batch, stage="", dataloader_idx=None):
+        assert dataloader_idx is not None
+        dataset_idx = self.mapper(dataloader_idx)
+
         batch_data = ProbTSBatchData(batch, self.device)
         batch_size = batch_data.past_target_cdf.shape[0]
         # self.batch_size.append(batch_size)
 
         orin_past_data = batch_data.past_target_cdf[:]
         orin_future_data = batch_data.future_target_cdf[:]
-  
-        assert dataloader_idx is not None
-        scaler = self.scaler[dataloader_idx]
+        
+        scaler = self.scaler[dataset_idx]
         batch_data.past_target_cdf = scaler.transform(batch_data.past_target_cdf)
         batch_data.future_target_cdf = scaler.transform(batch_data.future_target_cdf)
 
@@ -66,8 +73,8 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         self.metrics_dict = self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.metrics_dict)
 
         if stage == 'test':
-            if dataloader_idx is not None:
-                hor_str = str(self.forecaster.dataset[dataloader_idx])
+            if dataset_idx is not None:
+                hor_str = str(self.forecaster.dataset[dataset_idx])
             # elif type(self.forecaster.prediction_length) == list:  # noqa: E721
             #     hor_str = str(self.forecaster.prediction_length[0])
             else:

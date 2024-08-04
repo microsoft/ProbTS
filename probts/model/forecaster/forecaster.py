@@ -11,7 +11,7 @@ class Forecaster(nn.Module):
         self,
         target_dim: int,
         context_length: int,
-        prediction_length: int,
+        prediction_length: Union[int, List[int]],
         freq: Union[str, List[str]],
         use_lags: bool = False,
         use_feat_idx_emb: bool = False,

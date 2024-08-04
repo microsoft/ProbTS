@@ -24,8 +24,9 @@ logging.basicConfig(level=logging.INFO)
 
 class ProbTSCli(LightningCLI):
     def __init__(self, *args, **kwargs):
-        self.data_to_forecaster_link_args = DATA_TO_FORECASTER_ARGS
-        self.data_to_model_link_args = DATA_TO_MODEL_ARGS
+        self.data_to_forecaster_link_args = list(DATA_TO_FORECASTER_ARGS)
+        self.data_to_model_link_args = list(DATA_TO_MODEL_ARGS)
+        self.data_to_model_link_args.append("dataloader_id_mapper")
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
