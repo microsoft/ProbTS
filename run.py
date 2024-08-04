@@ -119,6 +119,7 @@ class ProbTSCli(LightningCLI):
             self.model = self.model_class.load_from_checkpoint(
                 self.ckpt,
                 scaler=self.datamodule.data_manager.scaler,
+                mapper=self.datamodule.data_manager.dataloader_id_mapper,
                 context_length=self.datamodule.data_manager.context_length,
                 target_dim=self.datamodule.data_manager.target_dim,
                 freq=self.datamodule.data_manager.freq,

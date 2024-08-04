@@ -1,5 +1,5 @@
 import importlib
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Callable
 
 import lightning.pytorch as pl
 import numpy as np
@@ -38,6 +38,7 @@ class ProbTSBaseModule(pl.LightningModule):
         cls,
         checkpoint_path,
         scaler=None,
+        mapper=None,
         learning_rate=None,
         no_training=False,
         **kwargs,
@@ -71,6 +72,7 @@ class ProbTSBaseModule(pl.LightningModule):
         model = cls(
             forecaster=forecaster,
             scaler=scaler,
+            dataloader_id_mapper=mapper,
             num_samples=checkpoint["hyper_parameters"].get("num_samples", 100),
             learning_rate=learning_rate,
             quantiles_num=checkpoint["hyper_parameters"].get("quantiles_num", 10),
