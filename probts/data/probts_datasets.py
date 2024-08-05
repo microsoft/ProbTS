@@ -110,8 +110,7 @@ class ProbTSDataset:
 
         # handle multiple prediction lengths
         if isinstance(self.prediction_length, list):  # list of int, [96, 192]
-            # TODO: add prediction length sample for pretrain
-            self.prediction_length_list = self.prediction_length
+            self.prediction_length_list = sorted(self.prediction_length)
             self.max_prediction_length = int(max(self.prediction_length))
         else:
             self.max_prediction_length = int(self.prediction_length)
@@ -248,8 +247,9 @@ class ProbTSDataset:
         )
 
         if self.prediction_length_list is not None:
+            assert isinstance(dataset, list)
             iter_dataset_list = []
-            for pred_len in self.prediction_length_list:
+            for i, pred_len in enumerate(self.prediction_length_list):
                 all_transforms = (
                     self.__create_transformation(data_stamp)
                     + self.__create_instance_splitter(mode, pred_len)
@@ -259,9 +259,9 @@ class ProbTSDataset:
                 )
 
                 iter_dataset = TransformedIterableDataset(
-                    dataset,
+                    dataset if mode == "train" else dataset[i],
                     transform=all_transforms,
-                    is_train=True if mode == "train" else False,
+                    is_train=(mode == "train"),
                 )
                 iter_dataset_list.append(iter_dataset)
             return iter_dataset_list

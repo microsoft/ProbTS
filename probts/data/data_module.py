@@ -73,7 +73,6 @@ class ProbTSDataModule(pl.LightningDataModule):
                 dataset_dict, batch_size=self.test_batch_size, num_workers=1
             )
 
-    # TODO: add collate_fn for univariate pretrain
     def train_collate_fn(self, batch):
         past_len_list = [len(x["past_target_cdf"]) for x in batch]
         future_len_list = [len(x["future_target_cdf"]) for x in batch]
@@ -88,7 +87,6 @@ class ProbTSDataModule(pl.LightningDataModule):
         batch_dict["dataset_idx"] = []
 
         for idx in range(len(batch)):
-            # TODO: add "dataset_idx" key to batch_dict
             local_past_len = len(batch[idx]["past_target_cdf"])
             local_future_len = len(batch[idx]["future_target_cdf"])
 

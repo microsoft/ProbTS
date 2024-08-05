@@ -72,22 +72,19 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         )
         self.metrics_dict = self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.metrics_dict)
 
-        if stage == 'test':
-            if dataset_idx is not None:
-                hor_str = str(self.forecaster.dataset[dataset_idx])
-            # elif type(self.forecaster.prediction_length) == list:  # noqa: E721
-            #     hor_str = str(self.forecaster.prediction_length[0])
-            else:
-                hor_str = str(self.forecaster.dataset)
+        # if stage == 'test':
+        #     if dataset_idx is not None:
+        #         dataloader_str = str(self.forecaster.dataset[dataset_idx]) + f'_{dataloader_idx}'
+        #     # elif type(self.forecaster.prediction_length) == list:  # noqa: E721
+        #     #     dataloader_str = str(self.forecaster.prediction_length[0])
+        #     else:
+        #         dataloader_str = str(self.forecaster.dataset)
             
-            if hor_str not in self.hor_metrics:
-                self.hor_metrics[hor_str] = {}
+        #     if dataloader_str not in self.hor_metrics:
+        #         self.hor_metrics[dataloader_str] = {}
             
-            self.hor_metrics[hor_str] = self.update_metrics(metrics, stage, target_dict=self.hor_metrics[hor_str])
-            self.hor_metrics[hor_str] = (self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.hor_metrics[hor_str]))
-            
-            # local_dict = {key: value[0] for key, value in self.hor_metrics[hor_str].items()}
-            # self.log_dict(local_dict, logger=True, on_epoch=True, prog_bar=True)
+        #     self.hor_metrics[dataloader_str] = self.update_metrics(metrics, stage, target_dict=self.hor_metrics[dataloader_str])
+        #     self.hor_metrics[dataloader_str] = (self.update_metrics(norm_metrics, stage, 'norm', target_dict=self.hor_metrics[dataloader_str]))
             
         return metrics
 

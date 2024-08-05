@@ -97,15 +97,16 @@ class ProbTSBaseModule(pl.LightningModule):
 
     def on_validation_epoch_start(self):
         self.metrics_dict = {}
-        self.hor_metrics = {}
+        # self.hor_metrics = {}
 
     def on_validation_epoch_end(self):
         avg_metrics = self.calculate_average(self.metrics_dict)
-        self.log_dict(avg_metrics, prog_bar=True)
+        self.log_dict(avg_metrics, add_dataloader_idx=True, on_step=False, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx, dataloader_idx=None):
         metrics = self.evaluate(batch, stage="test", dataloader_idx=dataloader_idx)
-        return metrics
+        avg_metrics = self.calculate_average(metrics)
+        self.log_dict(avg_metrics, add_dataloader_idx=True)
 
     def on_test_epoch_start(self):
         self.metrics_dict = {}
@@ -114,18 +115,17 @@ class ProbTSBaseModule(pl.LightningModule):
         self.avg_hor_metrics = {}
 
     def on_test_epoch_end(self):
-        # avg_metrics = {}
-        if len(self.hor_metrics) > 0:
-            # for idx, hor in enumerate(self.forecaster.prediction_length):
-            for hor_str, metric in self.hor_metrics.items():
-                # self.avg_hor_metrics[str(hor)] = self.calculate_weighted_average(self.hor_metrics[str(hor)], self.batch_size[str(hor)])
-                self.avg_hor_metrics[hor_str] = self.calculate_average(metric)
-                self.avg_metrics.update(self.calculate_average(metric, hor=hor_str))
-        else:
-            self.avg_metrics = self.calculate_average(self.metrics_dict)
-            # self.log_dict(self.avg_metrics, prog_bar=True)
-        # TODO: fix bug, log_dict not seperate dataloaders into multiple columns
-        self.log_dict(self.avg_metrics, logger=True)
+        pass
+        # if len(self.hor_metrics) > 0:
+        #     # for idx, hor in enumerate(self.forecaster.prediction_length):
+        #     for hor_str, metric in self.hor_metrics.items():
+        #         # self.avg_hor_metrics[str(hor)] = self.calculate_weighted_average(self.hor_metrics[str(hor)], self.batch_size[str(hor)])
+        #         self.avg_hor_metrics[hor_str] = self.calculate_average(metric)
+        #         self.avg_metrics.update(self.calculate_average(metric, hor=hor_str))
+        # else:
+        #     self.avg_metrics = self.calculate_average(self.metrics_dict)
+        # # TODO: fix bug, log_dict not seperate dataloaders into multiple columns
+        # self.log_dict(self.avg_metrics, logger=True, add_dataloader_idx=False)
 
     def predict_step(self, batch, batch_idx):
         batch_data = ProbTSBatchData(batch, self.device)

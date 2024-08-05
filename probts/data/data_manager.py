@@ -149,7 +149,7 @@ class DataManager:
                         ),
                     )
             
-            self.prediction_length = get_unique_list(self.prediction_length)
+            self.prediction_length = sorted(get_unique_list(self.prediction_length))
             self.dataloader_id_mapper = self.__create_mapper(prediction_length)
             self.target_dim = 1
 
@@ -164,7 +164,6 @@ class DataManager:
             for i, dataset in enumerate(self.dataset):
                 iter_dataset = self.probts_dataset_list[i].get_iter_dataset(mode)
                 if isinstance(iter_dataset, list):
-                    # TODO: add multiple prediction length support
                     assert len(iter_dataset) == len(self.prediction_length_raw[i])
                     for iter_dataset_i, pred_len in zip(
                         iter_dataset, self.prediction_length_raw[i]
