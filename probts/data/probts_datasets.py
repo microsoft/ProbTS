@@ -109,6 +109,7 @@ class ProbTSDataset:
             self.scaler = IdentityScaler()
 
         # handle multiple prediction lengths
+        self.prediction_length_list = None
         if isinstance(self.prediction_length, list):  # list of int, [96, 192]
             self.prediction_length_list = sorted(self.prediction_length)
             self.max_prediction_length = int(max(self.prediction_length))
@@ -269,7 +270,7 @@ class ProbTSDataset:
         else:
             all_transforms = (
                 self.__create_transformation(data_stamp)
-                + self.__create_instance_splitter(mode, pred_len)
+                + self.__create_instance_splitter(mode, self.prediction_length)
                 + sample_target_dim
                 + rename_fields
                 + SelectFields(self.input_names_)
