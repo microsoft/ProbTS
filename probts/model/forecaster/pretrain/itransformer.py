@@ -70,8 +70,6 @@ class Pretrain_iTransformer(Forecaster):
         self.projector_dict = {str(pred_len): idx for idx, pred_len in enumerate(self.prediction_length)}
         self.projector = nn.ModuleList([nn.Linear(f_hidden_size, pred_len, bias=True) for pred_len in self.prediction_length])
         
-
-
     def forward(self, inputs, pred_len=None):
         if self.use_time_feat:
             past_target = inputs[:,:,:self.target_dim]

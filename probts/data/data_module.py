@@ -36,8 +36,8 @@ class ProbTSDataModule(pl.LightningDataModule):
             self.dataset_train,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
-            persistent_workers=True,
-            pin_memory=True,
+            # persistent_workers=True,
+            # pin_memory=True,
             collate_fn=self.train_collate_fn,
         )
 
@@ -64,13 +64,15 @@ class ProbTSDataModule(pl.LightningDataModule):
                 dataloader_dict[dataset] = DataLoader(
                     dataset_dict[dataset],
                     batch_size=self.test_batch_size,
-                    num_workers=1,
+                    num_workers=self.num_workers,
                 )
             combined_loader = CombinedLoader(dataloader_dict, mode="sequential")
             return combined_loader
         else:
             return DataLoader(
-                dataset_dict, batch_size=self.test_batch_size, num_workers=1
+                dataset_dict,
+                batch_size=self.test_batch_size,
+                num_workers=self.num_workers,
             )
 
     def train_collate_fn(self, batch):
