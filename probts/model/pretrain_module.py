@@ -1,6 +1,6 @@
 from typing import Callable
 
-from einops import rearrange
+from einops import rearrange, repeat
 
 from probts.data import ProbTSBatchData
 from probts.model.probts_module import ProbTSBaseModule
@@ -49,7 +49,9 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         batch_data.future_target_cdf = scaler.transform(batch_data.future_target_cdf)
 
         # pretrain: multivaraite -> univariate
+        target_dim = batch_data.past_target_cdf.shape[-1]
         batch_data.past_target_cdf = rearrange(batch_data.past_target_cdf, 'b t c -> (b c) t 1')
+        batch_data.past_is_pad = repeat(batch_data.past_is_pad, 'b t -> (b c) t', c=target_dim)
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
         forecasts = rearrange(forecasts, '(b c) s t 1 -> b s t c', b=batch_size)
 

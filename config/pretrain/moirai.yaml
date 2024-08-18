@@ -4,9 +4,9 @@ trainer:
   accelerator: gpu
   devices: 1
   strategy: auto
-  max_epochs: 40
+  max_epochs: 10
   use_distributed_sampler: false
-  limit_train_batches: 10
+  limit_train_batches: 400
   log_every_n_steps: 1
   default_root_dir: ./exps
   num_sanity_val_steps: 0
@@ -18,6 +18,7 @@ model:
       patch_size: auto
       model_size: base
       scaling: true
+  learning_rate: 0.0001
   num_samples: 100
   quantiles_num: 20
 data:
@@ -30,7 +31,7 @@ data:
       scaler: standard # identity, standard
       context_length: 96
       history_length: 96 # needed for different freq dataset
-      prediction_length: [[48, 96], [48, 96]]
+      prediction_length: [[96, 192, 336], [96, 192, 336]]
       is_pretrain: true
       var_specific_norm: False
   batch_size: 64

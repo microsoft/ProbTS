@@ -33,6 +33,9 @@ class ProbTSForecastModule(ProbTSBaseModule):
 
         # Forecast
         batch_data.past_target_cdf = self.scaler.transform(batch_data.past_target_cdf)
+        batch_data.future_target_cdf = self.scaler.transform(
+            batch_data.future_target_cdf
+        )
         forecasts = self.forecaster.forecast(batch_data, self.num_samples)
 
         # Calculate denorm metrics
