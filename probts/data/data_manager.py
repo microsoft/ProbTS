@@ -87,6 +87,7 @@ class DataManager:
             )
             if scaler == "standard":
                 print(f"variate-specific normalization: {var_specific_norm}")
+            self.dataloader_id_mapper = None
 
         else:  # Load multiple datasets
             dataset_list = dataset

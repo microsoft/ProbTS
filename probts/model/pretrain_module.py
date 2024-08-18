@@ -34,8 +34,12 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         return loss
 
     def evaluate(self, batch, stage="", dataloader_idx=None):
-        assert dataloader_idx is not None
-        dataset_idx = self.mapper(dataloader_idx)
+        if dataloader_idx is not None:
+            dataset_idx = self.mapper(dataloader_idx)
+            scaler = self.scaler[dataset_idx]
+        else:
+            dataset_idx = 0
+            scaler = self.scaler
 
         batch_data = ProbTSBatchData(batch, self.device)
         batch_size = batch_data.past_target_cdf.shape[0]
@@ -44,7 +48,6 @@ class ProbTSPretrainModule(ProbTSBaseModule):
         orin_past_data = batch_data.past_target_cdf[:]
         orin_future_data = batch_data.future_target_cdf[:]
         
-        scaler = self.scaler[dataset_idx]
         batch_data.past_target_cdf = scaler.transform(batch_data.past_target_cdf)
         batch_data.future_target_cdf = scaler.transform(batch_data.future_target_cdf)
 

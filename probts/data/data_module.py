@@ -129,7 +129,11 @@ class ProbTSDataModule(pl.LightningDataModule):
             )
             batch_dict["context_length"].append(local_past_len)
             batch_dict["prediction_length"].append(local_future_len)
-            batch_dict["dataset_idx"].append(batch[idx]["dataset_idx"])
+
+            if "dataset_idx" in batch[idx]:
+                batch_dict["dataset_idx"].append(batch[idx]["dataset_idx"])
+            else:
+                batch_dict["dataset_idx"].append(0)
 
         batch_dict["target_dimension_indicator"] = torch.tensor(
             batch_dict["target_dimension_indicator"]

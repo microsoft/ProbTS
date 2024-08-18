@@ -132,7 +132,7 @@ class Moirai(Forecaster):
         preds = self._format_preds(
             self.max_patch_size,
             pred,
-            self.target_dim,
+            1,
             context_len,
             prediction_length,
         )
