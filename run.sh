@@ -4,8 +4,11 @@ DATASET=etth1
 CTX_LEN=96
 PRED_LEN=96
 
-DATA_DIR=/path/to/datasets
-LOG_DIR=/path/to/log_dir
+# DATA_DIR=/path/to/datasets
+# LOG_DIR=/path/to/log_dir
+
+DATA_DIR=./datasets
+LOG_DIR=../../log_dir
 
 # multivariate datasets:
 # ['exchange_rate_nips', 'solar_nips','electricity_nips', 'traffic_nips','wiki2000_nips']
@@ -28,8 +31,8 @@ LOG_DIR=/path/to/log_dir
 python run.py --config config/ltsf/${DATASET}/${MODEL}.yaml --seed_everything 0  \
     --data.data_manager.init_args.path ${DATA_DIR} \
     --trainer.default_root_dir ${LOG_DIR} \
+    --data.data_manager.init_args.dataset ${DATASET} \
     --data.data_manager.init_args.split_val true \
     --trainer.max_epochs 50 \
-    --data.data_manager.init_args.dataset ${DATASET} \
     --data.data_manager.init_args.context_length ${CTX_LEN} \
     --data.data_manager.init_args.prediction_length ${PRED_LEN} 

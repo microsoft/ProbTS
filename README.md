@@ -142,6 +142,33 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
     --data.data_manager.init_args.prediction_length 192 \
     ```
 
+- **Using Datasets from Monash Time Series Forecasting Repository**: To use datasets from the [Monash Time Series Forecasting Repository](https://forecastingdata.org/), follow these steps:
+
+    1. **Download the Dataset**: 
+    - Navigate to the target dataset, such as the [Electricity Hourly Dataset](https://zenodo.org/records/4656140).
+    - Download the `.tsf` file and place it in your local `datasets` directory (e.g., `./datasets`).
+
+    2. **Configure the Dataset**:
+    - Use the following configuration to specify the dataset, file path, and frequency:
+        ```bash
+        --data.data_manager.init_args.dataset {DATASET_NAME} \
+        --data.data_manager.init_args.data_path /path/to/data_file.tsf \
+        --data.data_manager.init_args.freq {FREQ} 
+        ```
+
+    - **Example Configuration**:
+        ```bash
+        --data.data_manager.init_args.dataset monash_electricity_hourly \
+        --data.data_manager.init_args.data_path ./datasets/electricity_hourly_dataset.tsf \
+        --data.data_manager.init_args.freq H \
+        --data.data_manager.init_args.context_length 96 \
+        --data.data_manager.init_args.prediction_length 96 \
+        --data.data_manager.init_args.multivariate true
+        ```
+
+    Note 1: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.
+
+    Note 2: You can adjust the test instance sampling using the `--data.data_manager.init_args.test_rolling_length` parameter. The default value is `96`.
 
 ### Checkpoints for Foundation Models
 
