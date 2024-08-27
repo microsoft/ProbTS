@@ -12,7 +12,7 @@ from .stsf_datasets import GluonTSDataset
 from .time_features import get_lags
 
 from probts.utils import StandardScaler, TemporalScaler, IdentityScaler
-
+import sys
 
 MULTI_VARIATE_DATASETS = [
     'exchange_rate_nips',
@@ -85,11 +85,14 @@ class DataManager:
         context_length_factor: int = 1,
         timeenc: int = 1,
         var_specific_norm: bool = True,
+        data_path: str = None,
+        freq: str = None,
+        multivariate: bool = True,
     ):
         self.dataset = dataset
         self.test_rolling_length = test_rolling_length
         self.global_mean = None
-        self.multivariate = True 
+        self.multivariate = multivariate 
         self.split_val = split_val
         self.test_sampling = test_sampling
         self.timeenc = timeenc
@@ -130,10 +133,14 @@ class DataManager:
             if context_length is None or prediction_length is None:
                 raise ValueError("The context_length or prediction_length is not assigned.")
 
-            data_path, self.freq = get_LTSF_info(dataset)
-            self.dataset_raw, self.data_stamp, self.target_dim, data_size = get_LTSF_Dataset(path, data_path,freq=self.freq,timeenc=self.timeenc)
+            data_path, self.freq = get_LTSF_info(dataset, data_path=data_path, freq=freq)
+            self.dataset_raw, self.data_stamp, self.target_dim, data_size = get_LTSF_Dataset(path, data_path,freq=self.freq,timeenc=self.timeenc, multivariate=self.multivariate)
             self.border_begin, self.border_end = get_LTSF_borders(dataset, data_size)
-
+            
+            if not self.multivariate:
+                self.target_dim = 1
+                raise NotImplementedError("Support for customized univariate dataset is still work in progress.")
+                
             assert data_size >= self.border_end[2], print("\n The end index larger then data size!")
 
             # Meta parameters
@@ -291,7 +298,7 @@ class DataManager:
             train_set = self.dataset_raw.train
             test_set = self.dataset_raw.test
             test_set = self.truncate_test(test_set)
-
+            
         if self.split_val:
             train_set, val_set = self.split_train_val(train_set)
         else:
