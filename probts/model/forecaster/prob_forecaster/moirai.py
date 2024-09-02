@@ -22,6 +22,7 @@ class Moirai(Forecaster):
         patch_size: Union[str, int] = 'auto',
         model_size: str = 'base',
         scaling: bool = True,
+        ckpt_path: str = None, # higher priority than model_size
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -30,14 +31,24 @@ class Moirai(Forecaster):
         
         # Load pretrained model
         self.no_training = True
-        self.moirai = MoiraiBackbone(
-            module=MoiraiModule.from_pretrained(f"Salesforce/moirai-1.0-R-{model_size}"),
-            prediction_length=self.prediction_length,
-            context_length=self.context_length,
-            patch_size=self.patch_size,
-            target_dim=self.target_dim if self.variate_mode == 'M' else 1,
-            scaling=scaling
-        )
+        if ckpt_path is not None:
+            self.moirai = MoiraiBackbone.load_from_checkpoint(
+                checkpoint_path=ckpt_path,
+                prediction_length=self.prediction_length,
+                context_length=self.context_length,
+                patch_size=self.patch_size,
+                target_dim=self.target_dim if self.variate_mode == 'M' else 1,
+                scaling=scaling
+            )
+        else:
+            self.moirai = MoiraiBackbone(
+                module=MoiraiModule.from_pretrained(f"Salesforce/moirai-1.0-R-{model_size}"),
+                prediction_length=self.prediction_length,
+                context_length=self.context_length,
+                patch_size=self.patch_size,
+                target_dim=self.target_dim if self.variate_mode == 'M' else 1,
+                scaling=scaling
+            )
 
     def forecast(self, batch_data, num_samples=None):
         if self.variate_mode == 'M':
