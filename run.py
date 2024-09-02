@@ -26,7 +26,8 @@ class ProbTSCli(LightningCLI):
     def __init__(self, *args, **kwargs):
         self.data_to_forecaster_link_args = list(DATA_TO_FORECASTER_ARGS)
         self.data_to_model_link_args = list(DATA_TO_MODEL_ARGS)
-        self.data_to_model_link_args.append("dataloader_id_mapper")
+        if isinstance(kwargs["model_class"], ProbTSPretrainModule):
+            self.data_to_model_link_args.append("dataloader_id_mapper")
         super().__init__(*args, **kwargs)
 
     def add_arguments_to_parser(self, parser):
@@ -170,8 +171,8 @@ class ProbTSCli(LightningCLI):
 if __name__ == "__main__":
     cli = ProbTSCli(
         datamodule_class=ProbTSDataModule,
-        # model_class=ProbTSForecastModule,
-        model_class=ProbTSPretrainModule,
+        model_class=ProbTSForecastModule,
+        # model_class=ProbTSPretrainModule,
         save_config_kwargs={"overwrite": True},
         run=False,
     )

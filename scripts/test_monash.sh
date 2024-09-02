@@ -1,3 +1,4 @@
+
 export CUDA_VISIBLE_DEVICES=0
 MODEL=patchtst
 DATASET="etth2"
@@ -28,9 +29,9 @@ LOG_DIR=./exps
 python run.py --config config/ltsf/etth1/${MODEL}.yaml --seed_everything 0  \
     --data.data_manager.init_args.path ${DATA_DIR} \
     --trainer.default_root_dir ${LOG_DIR} \
-    --data.data_manager.init_args.dataset ${DATASET} \
-    --data.data_manager.init_args.split_val true \
-    --trainer.max_epochs 50 \
-    --data.data_manager.init_args.context_length ${CTX_LEN} \
-    --data.data_manager.init_args.prediction_length ${PRED_LEN} \
-    --data.data_manager.init_args.is_pretrain true
+    --data.data_manager.init_args.dataset monash_electricity_hourly \
+    --data.data_manager.init_args.data_path /data/Blob_WestJP/v-jiawezhang/data/all_datasets/monash/solar_10_minutes_dataset.tsf \
+    --data.data_manager.init_args.freq min \
+    --data.data_manager.init_args.context_length 96 \
+    --data.data_manager.init_args.prediction_length 96 \
+    # --data.data_manager.init_args.multivariate true

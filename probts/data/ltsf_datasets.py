@@ -14,11 +14,13 @@ from .utils import get_LTSF_borders, get_LTSF_Dataset, get_LTSF_info
 @dataclass
 class LongTermTSDatasetLoader(ProbTSDataset):
     timeenc: int = field(default=1)
+    data_path: str = field(default=None)
+    freq: str = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
 
-        self.__read_data(self.dataset, self.path)
+        self.__read_data()
 
         train_data = self.dataset_raw[: self.border_end[0]]
         val_data = self.dataset_raw[: self.border_end[1]]
@@ -54,12 +56,12 @@ class LongTermTSDatasetLoader(ProbTSDataset):
             torch.tensor(self.group_train_set[0]["target"]), dim=-1
         )
 
-    def __read_data(self, dataset, path):
-        data_path, self.freq = get_LTSF_info(dataset)
+    def __read_data(self):
+        data_path, self.freq = get_LTSF_info(self.dataset, self.data_path, self.freq)
         self.dataset_raw, self.data_stamp, self.target_dim, data_size = (
-            get_LTSF_Dataset(path, data_path, timeenc=self.timeenc)
+            get_LTSF_Dataset(self.path, data_path, freq=self.freq, timeenc=self.timeenc)
         )
-        self.border_begin, self.border_end = get_LTSF_borders(dataset, data_size)
+        self.border_begin, self.border_end = get_LTSF_borders(self.dataset, data_size)
 
         assert data_size >= self.border_end[2], print(
             "\n The end index larger then data size!"

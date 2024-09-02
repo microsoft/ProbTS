@@ -31,6 +31,8 @@ class DataManager:
         is_pretrain: bool = False,
         context_length_factor: int = 1,
         timeenc: int = 1,
+        data_path: str = None,
+        freq: str = None,
     ):
         self.dataset = dataset
         # self.test_rolling_length = test_rolling_length
@@ -50,7 +52,7 @@ class DataManager:
             is_pretrain,
         ]
         short_term_specific_args = {"context_length_factor": context_length_factor}
-        long_term_specific_args = {"timeenc": timeenc}
+        long_term_specific_args = {"timeenc": timeenc, "data_path": data_path, "freq": freq}
 
         if isinstance(dataset, str) or len(dataset) == 1:
             dataset = dataset if isinstance(dataset, str) else dataset[0]

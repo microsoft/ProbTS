@@ -22,7 +22,7 @@ model:
       n_heads: 16
       fc_dropout: 0.2
       head_dropout: 0
-      individual: true
+      individual: false
   learning_rate: 0.0001
   quantiles_num: 20
 data:

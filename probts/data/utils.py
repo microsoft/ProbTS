@@ -11,12 +11,13 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from .monash_datasets import convert_monash_data_to_dataframe, monash_format_convert
 from .time_features import time_features
 
 warnings.filterwarnings("ignore")
 
 
-def get_LTSF_info(dataset):
+def get_LTSF_info(dataset, data_path=None, freq=None):
     if dataset == "etth1" or dataset == "etth2":
         if dataset == "etth1":
             data_path = "ETT-small/ETTh1.csv"
@@ -58,7 +59,14 @@ def get_LTSF_info(dataset):
         data_path = "nordpool/production.csv"
         freq = "H"
     else:
-        raise ValueError(f"Invalid dataset name: {dataset}!")
+        assert (
+            data_path is not None
+        ), f"Invalid dataset name: {dataset}! To use customizd datasets, the --data.data_manager.init_args.data_path should be assigned!"
+        assert (
+            freq is not None
+        ), "To use customizd datasets, the --data.data_manager.init_args.freq should be assigned!"
+    # else:
+    #     raise ValueError(f"Invalid dataset name: {dataset}!")
     return data_path, freq
 
 
@@ -86,7 +94,7 @@ def get_LTSF_borders(dataset, data_size):
     return border_begin, border_end
 
 
-def get_LTSF_Dataset(root_path, data_path, freq="h", timeenc=1):
+def get_LTSF_Dataset(root_path, data_path, freq="h", timeenc=1, multivariate=True):
     if "caiso" in data_path:
         data = pd.read_csv(root_path + data_path)
         data["Date"] = data["Date"].astype("datetime64[ns]")
@@ -117,30 +125,45 @@ def get_LTSF_Dataset(root_path, data_path, freq="h", timeenc=1):
     elif "nordpool" in data_path:
         df_raw = pd.read_csv(root_path + data_path, parse_dates=["Time"])
         df_raw = df_raw.rename(columns={"Time": "date"})
+    elif ".tsf" in data_path:
+        df_raw, _, _, _, _ = convert_monash_data_to_dataframe(data_path)
+        df_raw = monash_format_convert(df_raw, freq, multivariate)
+
+        if multivariate:
+            if freq.lower() == "h":
+                df_raw.set_index("date", inplace=True)
+                df_raw = df_raw.resample(freq).mean().reset_index()
     else:
         df_raw = pd.read_csv(os.path.join(root_path, data_path))
 
-    df_stamp = df_raw[["date"]]
-    df_stamp["date"] = pd.to_datetime(df_stamp.date)
+    if multivariate:
+        df_stamp = df_raw[["date"]]
+        df_stamp["date"] = pd.to_datetime(df_stamp.date)
 
-    if timeenc == 0:
-        df_stamp["month"] = df_stamp.date.apply(lambda row: row.month, 1)
-        df_stamp["day"] = df_stamp.date.apply(lambda row: row.day, 1)
-        df_stamp["weekday"] = df_stamp.date.apply(lambda row: row.weekday(), 1)
-        df_stamp["hour"] = df_stamp.date.apply(lambda row: row.hour, 1)
-        df_stamp["minute"] = df_stamp.date.apply(lambda row: row.minute, 1)
-        df_stamp["minute"] = df_stamp.minute.map(lambda x: x // 15)
-        data_stamp = df_stamp.drop(labels="date", axis=1).values
-    elif timeenc == 1:
-        data_stamp = time_features(pd.to_datetime(df_stamp["date"].values), freq=freq)
-        data_stamp = data_stamp.transpose(1, 0)
-    elif timeenc == 2:
-        data_stamp = pd.to_datetime(df_stamp["date"].values)
-        data_stamp = np.array(data_stamp, dtype="datetime64[s]")
+        if timeenc == 0:
+            df_stamp["month"] = df_stamp.date.apply(lambda row: row.month, 1)
+            df_stamp["day"] = df_stamp.date.apply(lambda row: row.day, 1)
+            df_stamp["weekday"] = df_stamp.date.apply(lambda row: row.weekday(), 1)
+            df_stamp["hour"] = df_stamp.date.apply(lambda row: row.hour, 1)
+            df_stamp["minute"] = df_stamp.date.apply(lambda row: row.minute, 1)
+            df_stamp["minute"] = df_stamp.minute.map(lambda x: x // 15)
+            data_stamp = df_stamp.drop(labels="date", axis=1).values
+        elif timeenc == 1:
+            data_stamp = time_features(
+                pd.to_datetime(df_stamp["date"].values), freq=freq
+            )
+            data_stamp = data_stamp.transpose(1, 0)
+        elif timeenc == 2:
+            data_stamp = pd.to_datetime(df_stamp["date"].values)
+            data_stamp = np.array(data_stamp, dtype="datetime64[s]")
 
-    df_raw = df_raw.set_index(keys="date")
+        df_raw = df_raw.set_index(keys="date")
+
+    else:
+        data_stamp = None
+
     df_raw = df_raw.fillna(0)
-    target_dim = len(df_raw.columns)
+    target_dim = len(df_raw.columns) if multivariate else 1
     data_size = len(df_raw)
     return df_raw, data_stamp, target_dim, data_size
 
