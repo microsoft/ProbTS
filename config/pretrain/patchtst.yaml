@@ -4,13 +4,14 @@ trainer:
   accelerator: gpu
   devices: 1
   strategy: auto
-  max_epochs: 50
+  max_epochs: 40
   use_distributed_sampler: false
-  limit_train_batches: 400
+  limit_train_batches: 100
   num_sanity_val_steps: 0
   log_every_n_steps: 1
   default_root_dir: ./exps
   accumulate_grad_batches: 4
+  num_sanity_val_steps: 0
 model:
   forecaster:
     class_path: probts.model.forecaster.point_forecaster.PatchTST
@@ -23,22 +24,22 @@ model:
       n_heads: 4
       fc_dropout: 0.2
       head_dropout: 0
-      individual: true
+      individual: false
   learning_rate: 0.0001
   quantiles_num: 20
 data:
   data_manager:
     class_path: probts.data.data_manager.DataManager
     init_args:
-      dataset: [etth1, etth2]
+      dataset: [etth1]
       path: ./datasets
       split_val: true
       scaler: standard # identity, standard
       context_length: 96
       history_length: 96 # needed for different freq dataset
-      prediction_length: [[96, 192], [96]]
+      prediction_length: 96
       is_pretrain: true
       var_specific_norm: False
   batch_size: 32
   test_batch_size: 32
-  num_workers: 8
+  num_workers: 0

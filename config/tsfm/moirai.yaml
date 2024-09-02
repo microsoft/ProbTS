@@ -9,6 +9,7 @@ trainer:
   limit_train_batches: 100
   log_every_n_steps: 1
   default_root_dir: ./results
+  num_sanity_val_steps: 0
 model:
   forecaster:
     class_path: probts.model.forecaster.prob_forecaster.Moirai
@@ -17,15 +18,16 @@ model:
       patch_size: auto
       model_size: base
       scaling: true
+      # ckpt_path: /home/v-zhenwzhang/Code/uni2ts/outputs/pretrain/moirai_small/ltsf/ltsf_pretrain/checkpoints/epoch=999-step=100000.ckpt
   num_samples: 100
   quantiles_num: 20
 data:
   data_manager:
     class_path: probts.data.data_manager.DataManager
     init_args:
-      dataset: solar_nips
+      dataset: ettm2
       split_val: true
       scaler: identity # identity, standard, temporal
   batch_size: 64
   test_batch_size: 64
-  num_workers: 8
+  num_workers: 0
