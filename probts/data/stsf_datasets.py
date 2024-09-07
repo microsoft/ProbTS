@@ -62,9 +62,10 @@ class GluonTSDatasetLoader(ProbTSDataset):
             self.train_set = self.dataset_raw.train
             self.test_set = self.dataset_raw.test
             self.test_set = self.truncate_test(self.test_set)
-            self.global_mean = torch.mean(
-                torch.tensor(self.train_set[0]["target"]), dim=-1
-            )  # TODO: check this
+            self.global_mean = 0
+            # self.global_mean = torch.mean(
+            #     torch.tensor(self.train_set["target"]), dim=-1
+            # )  # TODO: check this
 
         if split_val:
             self.train_set, self.val_set = self.split_train_val(self.train_set)

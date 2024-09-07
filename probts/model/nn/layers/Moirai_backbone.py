@@ -7,22 +7,36 @@
 # We thank the authors for their contributions.
 # ---------------------------------------------------------------------------------
 
-
 import math
 from contextlib import contextmanager
 from copy import deepcopy
+from functools import partial
 from typing import Any, Generator, Optional
 
 import lightning as L
 import torch
+import torch.nn.functional as F
 from einops import rearrange, reduce, repeat
+from huggingface_hub import PyTorchModelHubMixin
+from hydra.utils import instantiate
 from jaxtyping import Bool, Float, Int
+from torch import nn
 from torch.distributions import Distribution
+from torch.utils._pytree import tree_map
 
-from uni2ts.common.torch_util import safe_div
+from uni2ts.common.torch_util import mask_fill, packed_attention_mask, safe_div
+from uni2ts.distribution import DistributionOutput
 from uni2ts.loss.packed import PackedNLLLoss as _PackedNLLLoss
-from uni2ts.model.moirai.module import MoiraiModule
+from uni2ts.module.norm import RMSNorm
 from uni2ts.module.packed_scaler import PackedNOPScaler, PackedStdScaler
+from uni2ts.module.position import (
+    BinaryAttentionBias,
+    QueryKeyProjection,
+    RotaryProjection,
+)
+from uni2ts.module.transformer import TransformerEncoder
+from uni2ts.module.ts_embed import MultiInSizeLinear
+# from uni2ts.model.moirai.module import MoiraiModule # removed for local modification
 
 
 class SampleNLLLoss(_PackedNLLLoss):
@@ -51,6 +65,111 @@ class SampleNLLLoss(_PackedNLLLoss):
         )
         loss = safe_div(loss, tobs)
         return (loss * mask).sum(dim=(-1, -2))
+
+
+def encode_distr_output(
+    distr_output: DistributionOutput,
+) -> dict[str, str | float | int]:
+    def _encode(val):
+        if not isinstance(val, DistributionOutput):
+            return val
+
+        return {
+            "_target_": f"{val.__class__.__module__}.{val.__class__.__name__}",
+            **tree_map(_encode, val.__dict__),
+        }
+
+    return _encode(distr_output)
+
+
+def decode_distr_output(config: dict[str, str | float | int]) -> DistributionOutput:
+    return instantiate(config, _convert_="all")
+
+
+class MoiraiModule(
+    nn.Module,
+    PyTorchModelHubMixin,
+    coders={DistributionOutput: (encode_distr_output, decode_distr_output)},
+):
+    """Contains components of Moirai to ensure implementation is identical across models"""
+
+    def __init__(
+        self,
+        distr_output: DistributionOutput,
+        d_model: int,
+        num_layers: int,
+        patch_sizes: tuple[int, ...],  # tuple[int, ...] | list[int]
+        max_seq_len: int,
+        attn_dropout_p: float,
+        dropout_p: float,
+        scaling: bool = True,
+    ):
+        super().__init__()
+        self.d_model = d_model
+        self.num_layers = num_layers
+        self.patch_sizes = patch_sizes
+        self.max_seq_len = max_seq_len
+        self.scaling = scaling
+
+        self.mask_encoding = nn.Embedding(num_embeddings=1, embedding_dim=d_model)
+        self.scaler = PackedStdScaler() if scaling else PackedNOPScaler()
+        self.in_proj = MultiInSizeLinear(
+            in_features_ls=patch_sizes,
+            out_features=d_model,
+        )
+        self.encoder = TransformerEncoder(
+            d_model,
+            num_layers,
+            num_heads=None,
+            pre_norm=True,
+            attn_dropout_p=attn_dropout_p,
+            dropout_p=dropout_p,
+            norm_layer=RMSNorm,
+            activation=F.silu,
+            use_glu=True,
+            use_qk_norm=True,
+            var_attn_bias_layer=partial(BinaryAttentionBias),
+            time_qk_proj_layer=partial(
+                QueryKeyProjection,
+                proj_layer=RotaryProjection,
+                kwargs=dict(max_len=max_seq_len),
+                partial_factor=(0.0, 0.5),
+            ),
+            shared_var_attn_bias=False,
+            shared_time_qk_proj=True,
+            d_ff=None,
+        )
+        self.distr_output = distr_output
+        self.param_proj = self.distr_output.get_param_proj(d_model, patch_sizes)
+
+    def forward(
+        self,
+        target: Float[torch.Tensor, "*batch seq_len max_patch"],
+        observed_mask: Bool[torch.Tensor, "*batch seq_len max_patch"],
+        sample_id: Int[torch.Tensor, "*batch seq_len"],
+        time_id: Int[torch.Tensor, "*batch seq_len"],
+        variate_id: Int[torch.Tensor, "*batch seq_len"],
+        prediction_mask: Bool[torch.Tensor, "*batch seq_len"],
+        patch_size: Int[torch.Tensor, "*batch seq_len"],
+    ) -> Distribution:
+        loc, scale = self.scaler(
+            target,
+            observed_mask * ~prediction_mask.unsqueeze(-1),
+            sample_id,
+            variate_id,
+        )
+        scaled_target = (target - loc) / scale
+        reprs = self.in_proj(scaled_target, patch_size)
+        masked_reprs = mask_fill(reprs, prediction_mask, self.mask_encoding.weight)
+        reprs = self.encoder(
+            masked_reprs,
+            packed_attention_mask(sample_id),
+            time_id=time_id,
+            var_id=variate_id,
+        )
+        distr_param = self.param_proj(reprs, patch_size)
+        distr = self.distr_output.distribution(distr_param, loc=loc, scale=scale)
+        return distr, reprs
 
 
 class MoiraiBackbone(L.LightningModule):
@@ -129,6 +248,7 @@ class MoiraiBackbone(L.LightningModule):
         if self.hparams.patch_size == "auto":
             val_loss = []
             preds = []
+            reprs_list = []
             for patch_size in self.module.patch_sizes:
                 val_loss.append(
                     self._val_loss(
@@ -137,15 +257,16 @@ class MoiraiBackbone(L.LightningModule):
                         observed_target=past_observed_target[
                             ..., : self.past_length, :
                         ],
-                        is_pad=past_is_pad[..., : self.past_length]
+                        is_pad=past_is_pad[..., : self.past_length],
                     )
                 )
-                distr = self._get_distr(
+                distr, reprs = self._get_distr(
                     patch_size,
                     past_target[..., -self.hparams.context_length :, :],
                     past_observed_target[..., -self.hparams.context_length :, :],
-                    past_is_pad[..., -self.hparams.context_length :]
+                    past_is_pad[..., -self.hparams.context_length :],
                 )
+                reprs_list.append(reprs)
                 preds.append(
                     self._format_preds(
                         patch_size,
@@ -158,9 +279,9 @@ class MoiraiBackbone(L.LightningModule):
             val_loss = torch.stack(val_loss)
             preds = torch.stack(preds)
             idx = val_loss.argmin(dim=0)
-            return preds[idx, torch.arange(len(idx), device=idx.device)]
+            return preds[idx, torch.arange(len(idx), device=idx.device)], reprs_list[idx]
         else:
-            distr = self._get_distr(
+            distr, reprs = self._get_distr(
                 self.hparams.patch_size,
                 past_target[..., -self.hparams.context_length :, :],
                 past_observed_target[..., -self.hparams.context_length :, :],
@@ -169,14 +290,14 @@ class MoiraiBackbone(L.LightningModule):
             preds = distr.sample(torch.Size((num_samples or self.hparams.num_samples,)))
             return self._format_preds(
                 self.hparams.patch_size, preds, past_target.shape[-1]
-            )
+            ), reprs
 
     def _val_loss(
         self,
         patch_size: int,
         target: Float[torch.Tensor, "batch time tgt"],
         observed_target: Bool[torch.Tensor, "batch time tgt"],
-        is_pad: Bool[torch.Tensor, "batch time"]
+        is_pad: Bool[torch.Tensor, "batch time"],
     ) -> Float[torch.Tensor, "batch"]:
         # convert format
         (
@@ -195,10 +316,10 @@ class MoiraiBackbone(L.LightningModule):
             future_observed_target=observed_target[
                 ..., self.hparams.context_length :, :
             ],
-            future_is_pad=is_pad[..., self.hparams.context_length :]
+            future_is_pad=is_pad[..., self.hparams.context_length :],
         )
         # get predictions
-        distr = self.module(
+        distr, _ = self.module(
             target,
             observed_mask,
             sample_id,
@@ -222,7 +343,7 @@ class MoiraiBackbone(L.LightningModule):
         patch_size: int,
         past_target: Float[torch.Tensor, "batch past_time tgt"],
         past_observed_target: Bool[torch.Tensor, "batch past_time tgt"],
-        past_is_pad: Bool[torch.Tensor, "batch past_time"]
+        past_is_pad: Bool[torch.Tensor, "batch past_time"],
     ) -> Distribution:
         # convert format
         (
@@ -232,14 +353,9 @@ class MoiraiBackbone(L.LightningModule):
             time_id,
             variate_id,
             prediction_mask,
-        ) = self._convert(
-            patch_size,
-            past_target,
-            past_observed_target,
-            past_is_pad
-        )
+        ) = self._convert(patch_size, past_target, past_observed_target, past_is_pad)
         # get predictions
-        distr = self.module(
+        distr, reprs = self.module(
             target,
             observed_mask,
             sample_id,
@@ -248,7 +364,7 @@ class MoiraiBackbone(L.LightningModule):
             prediction_mask,
             torch.ones_like(time_id, dtype=torch.long) * patch_size,
         )
-        return distr
+        return distr, reprs
 
     @staticmethod
     def _patched_seq_pad(
@@ -309,7 +425,7 @@ class MoiraiBackbone(L.LightningModule):
         future_observed_target: Optional[
             Bool[torch.Tensor, "batch future_time tgt"]
         ] = None,
-        future_is_pad: Optional[Bool[torch.Tensor, "batch future_time"]] = None
+        future_is_pad: Optional[Bool[torch.Tensor, "batch future_time"]] = None,
     ) -> tuple[
         Float[torch.Tensor, "batch combine_seq patch"],  # target
         Bool[torch.Tensor, "batch combine_seq patch"],  # observed_mask
@@ -339,7 +455,7 @@ class MoiraiBackbone(L.LightningModule):
                 dtype=past_target.dtype,
                 device=device,
             )
-        
+
         past_seq_id, future_seq_id = self._generate_time_id(
             patch_size, past_observed_target, future_target
         )
@@ -455,7 +571,7 @@ class MoiraiBackbone(L.LightningModule):
                     torch.arange(past_target.shape[-1], device=device) + dim_count,
                     f"dim -> {' '.join(map(str, batch_shape))} (dim future)",
                     # future=self.prediction_token_length(patch_size),
-                    future = math.ceil(future_target.shape[-2] / patch_size)
+                    future=math.ceil(future_target.shape[-2] / patch_size),
                 ),
             ]
         )
