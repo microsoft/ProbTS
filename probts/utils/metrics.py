@@ -64,7 +64,7 @@ def mase(
     diff = np.mean(np.abs(target - forecast), axis=1)
     mase = diff / seasonal_error
     # if seasonal_error is 0, set mase to 0
-    mase = mase.filled(0)  
+    mase = np.nan_to_num(mase, nan=0.0)
     return np.mean(mase)
 
 def calculate_seasonal_error(

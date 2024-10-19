@@ -1,4 +1,3 @@
-from .mean import MeanForecaster
 from .linear import LinearForecaster
 from .patchtst import PatchTST
 from .transformer import TransformerForecaster
@@ -6,9 +5,12 @@ from .gru import GRUForecaster
 from .dlinear import DLinear
 from .nlinear import NLinear
 from .nhits import NHiTS
-from .timesnet import TimesNet
 from .itransformer import iTransformer
 from .autoformer import Autoformer
+from .transformer_enc import TransformerEnc
+from .tsmixer import TSMixer
+from .elastst import ElasTST
+
 
 # ------- add timesfm to sys.path ----------
 try:

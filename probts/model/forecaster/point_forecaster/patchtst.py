@@ -5,7 +5,6 @@
 # - License: Apache-2.0
 
 # We thank the authors for their contributions.
-# -----
 # ----------------------------------------------------------------------------
 
 
@@ -14,8 +13,8 @@ from torch import Tensor
 from typing import Optional
 
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers.PatchTST_backbone import PatchTST_backbone
-from probts.model.nn.layers.PatchTST_layers import series_decomp
+from probts.model.nn.layers.PatchTSTModule.PatchTST_backbone import PatchTST_backbone
+from probts.model.nn.layers.PatchTSTModule.PatchTST_layers import series_decomp
 
 class PatchTST(Forecaster):
     def __init__(
@@ -61,6 +60,11 @@ class PatchTST(Forecaster):
         else:
             self.enc_linear = nn.Identity()
 
+        if isinstance(self.prediction_length, list):
+            self.prediction_length = self.prediction_length[0]
+        if isinstance(self.context_length, list):
+            self.context_length = self.context_length[0]
+        
         # Load parameters
         c_in = self.input_size
         context_window = self.context_length
@@ -77,7 +81,7 @@ class PatchTST(Forecaster):
                                   attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
                                   pe=pe, learn_pe=learn_pe, fc_dropout=fc_dropout, head_dropout=head_dropout, padding_patch = padding_patch,
                                   pretrain_head=False, head_type=head_type, individual=individual, revin=revin, affine=affine,
-                                  subtract_last=subtract_last)
+                                  subtract_last=subtract_last,)
             self.model_res = PatchTST_backbone(c_in=c_in, context_window=context_window, target_window=target_window, patch_len=patch_len, stride=stride, 
                                   max_seq_len=max_seq_len, n_layers=n_layers, d_model=f_hidden_size,
                                   n_heads=n_heads, d_k=d_k, d_v=d_v, d_ff=d_ff, attn_dropout=attn_dropout,
@@ -85,7 +89,7 @@ class PatchTST(Forecaster):
                                   attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
                                   pe=pe, learn_pe=learn_pe, fc_dropout=fc_dropout, head_dropout=head_dropout, padding_patch = padding_patch,
                                   pretrain_head=False, head_type=head_type, individual=individual, revin=revin, affine=affine,
-                                  subtract_last=subtract_last)
+                                  subtract_last=subtract_last,)
         else:
             self.model = PatchTST_backbone(c_in=c_in, context_window=context_window, target_window=target_window, patch_len=patch_len, stride=stride, 
                                   max_seq_len=max_seq_len, n_layers=n_layers, d_model=f_hidden_size,
@@ -94,7 +98,7 @@ class PatchTST(Forecaster):
                                   attn_mask=attn_mask, res_attention=res_attention, pre_norm=pre_norm, store_attn=store_attn,
                                   pe=pe, learn_pe=learn_pe, fc_dropout=fc_dropout, head_dropout=head_dropout, padding_patch = padding_patch,
                                   pretrain_head=False, head_type=head_type, individual=individual, revin=revin, affine=affine,
-                                  subtract_last=subtract_last)
+                                  subtract_last=subtract_last,)
         self.loss_fn = nn.MSELoss(reduction='none')
     
     def forward(self, x):

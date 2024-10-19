@@ -286,6 +286,12 @@ class NHiTS(Forecaster):
 
         n_layers = [n_layers] * n_stacks
         hidden_size = n_stacks * [2 * [hidden_size]]
+        
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
 
         if pooling_sizes is None:
             pooling_sizes = np.exp2(np.round(np.linspace(0.49, np.log2(self.prediction_length / 2), n_stacks)))

@@ -11,7 +11,6 @@
 import torch
 import torch.nn as nn
 from probts.model.forecaster import Forecaster
-import sys
 
 class moving_avg(nn.Module):
     """
@@ -61,6 +60,10 @@ class DLinear(Forecaster):
         else:
             self.enc_linear = nn.Identity()
 
+        if isinstance(self.prediction_length, list):
+            self.prediction_length = max(self.prediction_length)
+        if isinstance(self.context_length, list):
+            self.context_length = max(self.context_length)
 
         # Decompsition Kernel Size
         self.kernel_size = kernel_size
@@ -77,6 +80,7 @@ class DLinear(Forecaster):
         else:
             self.Linear_Seasonal = nn.Linear(self.context_length, self.prediction_length)
             self.Linear_Trend = nn.Linear(self.context_length, self.prediction_length)
+        
         self.loss_fn = nn.MSELoss(reduction='none')
 
     def encoder(self, inputs):

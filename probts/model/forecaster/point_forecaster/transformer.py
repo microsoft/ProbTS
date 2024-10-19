@@ -21,6 +21,12 @@ class TransformerForecaster(Forecaster):
         super().__init__(**kwargs)
         self.autoregressive = True
         self.f_hidden_size = f_hidden_size
+        
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
 
         self.enc_linear = nn.Linear(self.input_size, self.f_hidden_size)
         self.dec_linear = nn.Linear(self.input_size, self.f_hidden_size)
@@ -41,7 +47,7 @@ class TransformerForecaster(Forecaster):
         self.linear = nn.Linear(self.f_hidden_size, self.target_dim)
         self.loss_fn = nn.MSELoss(reduction='none')
 
-    def loss(self, batch_data):
+    def loss(self, batch_data, training_range=None):
         inputs = self.get_inputs(batch_data, 'all') # [B L D]
 
         # Encode

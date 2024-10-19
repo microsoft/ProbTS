@@ -17,6 +17,12 @@ class GRUForecaster(Forecaster):
         super().__init__(**kwargs)
         self.autoregressive = True
         
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+        
         self.model = nn.GRU(
             input_size=self.input_size,
             hidden_size=f_hidden_size,

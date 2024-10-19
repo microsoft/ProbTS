@@ -12,13 +12,13 @@ from .time_features import time_features
 from .monash_datasets import convert_monash_data_to_dataframe, monash_format_convert
 import numpy as np
 
-def get_LTSF_info(dataset, data_path=None, freq=None):
+def get_LTSF_info(dataset):
     if dataset == 'etth1' or dataset == 'etth2':
         if dataset == 'etth1':
             data_path = 'ETT-small/ETTh1.csv'
         else:
             data_path = 'ETT-small/ETTh2.csv'
-        freq = 'H'
+        freq = 'h'
     elif dataset == 'ettm1' or dataset == 'ettm2':
         if dataset == 'ettm1':
             data_path = 'ETT-small/ETTm1.csv'
@@ -28,10 +28,10 @@ def get_LTSF_info(dataset, data_path=None, freq=None):
     elif dataset in ['traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf']:
         if dataset == 'traffic_ltsf':
             data_path = 'traffic/traffic.csv'
-            freq = 'H'
+            freq = 'h'
         elif dataset == 'electricity_ltsf':
             data_path = 'electricity/electricity.csv'
-            freq = 'H'
+            freq = 'h'
         elif dataset == 'exchange_ltsf':
             data_path = 'exchange_rate/exchange_rate.csv'
             freq = 'B'
@@ -43,15 +43,24 @@ def get_LTSF_info(dataset, data_path=None, freq=None):
             freq = 'min'
     elif dataset == 'caiso':
         data_path = 'caiso/caiso_20130101_20210630.csv'
-        freq = 'H'
+        freq = 'h'
     elif dataset == 'nordpool':
         data_path = 'nordpool/production.csv'
-        freq = 'H'
+        freq = 'h'
+    elif dataset == 'solar_hour':
+        data_path = 'monash/solar_10_minutes_dataset.tsf'
+        freq = 'h'
+    elif dataset == 'solar_10min':
+        data_path = 'monash/solar_10_minutes_dataset.tsf'
+        freq = 'min'
+    elif dataset == 'sunspot':
+        data_path = 'monash/sunspot_dataset_without_missing_values.tsf'
+        freq = 'D'
+    elif dataset == 'river_flow':
+        data_path = 'monash/saugeenday_dataset.tsf'
+        freq = 'D'
     else:
-        assert data_path is not None, f'Invalid dataset name: {dataset}! To use customizd datasets, the --data.data_manager.init_args.data_path should be assigned!'
-        assert freq is not None, 'To use customizd datasets, the --data.data_manager.init_args.freq should be assigned!'
-    # else:
-    #     raise ValueError(f"Invalid dataset name: {dataset}!")
+        raise ValueError(f"Invalid dataset name: {dataset}!")
     return data_path, freq
 
 def get_LTSF_borders(dataset, data_size):
@@ -69,7 +78,7 @@ def get_LTSF_borders(dataset, data_size):
         border_end = [num_train, num_train + num_vali, data_size]
     return border_begin, border_end
 
-def get_LTSF_Dataset(root_path, data_path,freq='h', timeenc=1, multivariate=True):
+def get_LTSF_Dataset(root_path, data_path, freq='h', timeenc=1, multivariate=True):
     if 'caiso' in data_path:
         data = pd.read_csv(root_path + data_path)
         data['Date'] = data['Date'].astype('datetime64[ns]')

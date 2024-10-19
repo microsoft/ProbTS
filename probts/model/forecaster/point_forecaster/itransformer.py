@@ -35,6 +35,12 @@ class iTransformer(Forecaster):
         
         self.label_len = label_len
         
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+            
         self.use_norm = use_norm
         # Embedding
         self.enc_embedding = DataEmbedding_inverted(self.context_length, f_hidden_size,

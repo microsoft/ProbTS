@@ -1,16 +1,15 @@
 import torch
 from torch import nn
 from typing import List
-
 from probts.utils import weighted_average, TemporalScaler
-
+from typing import Union
 
 class Forecaster(nn.Module):
     def __init__(
         self,
         target_dim: int,
-        context_length: int,
-        prediction_length: int,
+        context_length: Union[list,int],
+        prediction_length: Union[list,int],
         freq: str ,
         use_lags: bool = False,
         use_feat_idx_emb: bool = False,
@@ -28,6 +27,17 @@ class Forecaster(nn.Module):
         
         self.context_length = context_length
         self.prediction_length = prediction_length
+        
+        if isinstance(self.context_length, list):
+            self.max_context_length = max(self.context_length)
+        else:
+            self.max_context_length = self.context_length
+        
+        if isinstance(self.prediction_length, list):
+            self.max_prediction_length = max(self.prediction_length)
+        else:
+            self.max_prediction_length = self.prediction_length
+            
         self.target_dim = target_dim
         self.freq = freq
         self.use_lags = use_lags
@@ -87,13 +97,13 @@ class Forecaster(nn.Module):
         past_target_cdf,
         future_target_cdf,
         mode
-    ):
+    ):      
         if mode == 'all':
             sequence = torch.cat((past_target_cdf, future_target_cdf), dim=1)
-            seq_length = self.context_length + self.prediction_length
+            seq_length = self.max_context_length + self.max_prediction_length
         elif mode == 'encode':
             sequence = past_target_cdf
-            seq_length = self.context_length
+            seq_length = self.max_context_length
         elif mode == 'decode':
             sequence = past_target_cdf
             seq_length = 1
@@ -126,9 +136,9 @@ class Forecaster(nn.Module):
     ):
         if mode == 'all':
             time_feat = torch.cat(
-                (past_time_feat[:, -self.context_length:, ...], future_time_feat), dim=1)
+                (past_time_feat[:, -self.max_context_length:, ...], future_time_feat), dim=1)
         elif mode == 'encode':
-            time_feat = past_time_feat[:, -self.context_length:, ...]
+            time_feat = past_time_feat[:, -self.max_context_length:, ...]
         elif mode == 'decode':
             time_feat = future_time_feat
         return time_feat
@@ -154,8 +164,8 @@ class Forecaster(nn.Module):
     
     def get_scale(self, batch_data):
         self.scaler.fit(
-            batch_data.past_target_cdf[:, -self.context_length:, ...],
-            batch_data.past_observed_values[:, -self.context_length:, ...]
+            batch_data.past_target_cdf[:, -self.max_context_length:, ...],
+            batch_data.past_observed_values[:, -self.max_context_length:, ...]
         )
     
     def get_weighted_loss(self, batch_data, loss):

@@ -23,6 +23,12 @@ class LinearForecaster(Forecaster):
         super().__init__(**kwargs)
         self.individual = individual
         
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+        
         if self.individual:
             self.linear = nn.ModuleList()
             for i in range(self.input_size):

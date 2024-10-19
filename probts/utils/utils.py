@@ -6,11 +6,12 @@
 # We thank the authors for their contributions.
 # ---------------------------------------------------------------------------------
 
-
+import re
+import os
 import torch
 import numpy as np
 from typing import Optional, Dict
-
+import torch.nn as nn
 
 class Scaler:
     def __init__(self):
@@ -201,7 +202,8 @@ def extract(a, t, x_shape):
 def weighted_average(
     x: torch.Tensor,
     weights: Optional[torch.Tensor] = None,
-    dim: int = None
+    dim: int = None,
+    reduce: str = 'mean',
 ):
     """
     Computes the weighted average of a given tensor across a given dim, masking
@@ -218,6 +220,8 @@ def weighted_average(
     """
     if weights is not None:
         weighted_tensor = torch.where(weights != 0, x * weights, torch.zeros_like(x))
+        if reduce != 'mean':
+            return weighted_tensor
         sum_weights = torch.clamp(
             weights.sum(dim=dim) if dim else weights.sum(), min=1.0
         )
@@ -225,4 +229,203 @@ def weighted_average(
             weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()
         ) / sum_weights
     else:
-        return x.mean(dim=dim)
+        return x.mean(dim=dim) if dim else x
+    
+    
+class InstanceNorm(nn.Module):
+    def __init__(self, eps=1e-5):
+        """
+        :param eps: a value added for numerical stability
+        """
+        super(InstanceNorm, self).__init__()
+        self.eps = eps
+
+    def forward(self, x, mode:str):
+        if mode == 'norm':
+            self._get_statistics(x)
+            x = self._normalize(x)
+        elif mode == 'denorm':
+            x = self._denormalize(x)
+        else: raise NotImplementedError
+        return x
+
+    def _get_statistics(self, x):
+        dim2reduce = tuple(range(1, x.ndim-1))
+        self.mean = torch.mean(x, dim=dim2reduce, keepdim=True).detach()
+        self.stdev = torch.sqrt(torch.var(x, dim=dim2reduce, keepdim=True, unbiased=False) + self.eps).detach()
+
+    def _normalize(self, x):
+        x = x - self.mean
+        x = x / self.stdev
+        return x
+
+    def _denormalize(self, x):
+        x = x * self.stdev
+        x = x + self.mean
+        return x
+
+   
+class RamdonRevIN(nn.Module):
+    def __init__(self, num_features: int, eps=1e-5, dist="gaussian"):
+        """
+        :param num_features: the number of features or channels
+        :param eps: a value added for numerical stability
+        :param affine: if True, RevIN has learnable affine parameters
+        """
+        super(RamdonRevIN, self).__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.dist = dist
+        self._init_params()
+
+    def forward(self, x, mode:str, mask=None):
+        dim = len(x.shape)
+        if dim == 4 and x.shape[1] == 1:
+            x = x.squeeze(1)
+            if mask is not None:
+                mask = mask.squeeze(1)
+            
+        if mode == 'norm':
+            self._get_statistics(x,mask)
+            x = self._normalize(x) * mask
+        elif mode == 'denorm':
+            x = self._denormalize(x) * mask
+        else: raise NotImplementedError
+
+        if dim == 4 and len(x.shape)==3:
+            x = x.unsqueeze(1)
+        return x
+
+    def _init_params(self):
+        # initialize RevIN params
+        requires_grad = False
+        if self.dist == "gaussian":
+            affine_weight = torch.randn(self.num_features) + torch.ones(self.num_features)
+            affine_bias = torch.randn(self.num_features)
+        elif self.dist == "learn":
+            affine_weight = torch.ones(self.num_features)
+            affine_bias = torch.zeros(self.num_features)
+            requires_grad = True
+        elif self.dist == "uniform" or self.dist == "none":
+            affine_weight = torch.rand(self.num_features)
+            affine_bias = torch.rand(self.num_features)
+        else:
+            print("Invalid distribution setting for RamdonRevIN, select from: [gaussian, learn, uniform, none]")
+            
+        if requires_grad:
+            self.affine_weight = nn.Parameter(affine_weight, requires_grad=True)
+            self.affine_bias = nn.Parameter(affine_bias,requires_grad=True)
+        else:
+            self.register_buffer('affine_weight', torch.tensor(affine_weight))
+            self.register_buffer('affine_bias', torch.tensor(affine_bias))
+                
+        
+
+    def _get_statistics(self, x, mask):
+        dim2reduce = tuple(range(1, x.ndim-1))
+        if mask is None:
+            self.mean = torch.mean(x, dim=dim2reduce, keepdim=True).detach()
+            self.stdev = torch.sqrt(torch.var(x, dim=dim2reduce, keepdim=True, unbiased=False) + self.eps).detach()
+        else:
+            num_observed = mask.sum(dim=dim2reduce, keepdim=True)
+            self.mean = ((x * mask).sum(dim=dim2reduce, keepdim=True) / num_observed).detach()
+            squared_diffs = (x - self.mean) ** 2 * mask
+            variance = squared_diffs.sum(dim=dim2reduce, keepdim=True) / num_observed  
+            self.stdev = torch.sqrt(variance + self.eps).detach()
+
+    def _normalize(self, x):
+        x = x - self.mean
+        x = x / self.stdev
+
+        x = x * self.affine_weight
+        x = x + self.affine_bias
+        return x
+
+    def _denormalize(self, x):
+        x = x - self.affine_bias
+        x = x / (self.affine_weight + self.eps*self.eps)
+        x = x * self.stdev
+        x = x + self.mean
+        return x
+
+
+def convert_to_list(s):
+    '''
+    Convert prediction length strings into list
+    e.g., '96-192-336-720' will be convert into [96,192,336,720]
+    Input: str, list, int
+    Returns: list
+    '''
+    if (type(s).__name__=='int'):
+        return [s]
+    elif (type(s).__name__=='list'):
+        return s
+    elif (type(s).__name__=='str'):
+        elements = re.split(r'\D+', s)
+        return list(map(int, elements))
+    else:
+        return None
+    
+def convert_to_float_list(s):
+    '''
+    Convert prediction length strings into list
+    e.g., '96-192-336-720' will be convert into [96,192,336,720]
+    Input: str, list, int
+    Returns: list
+    '''
+    if (type(s).__name__=='int'):
+        return [s]
+    elif (type(s).__name__=='list'):
+        return s
+    elif (type(s).__name__=='str'):
+        elements = re.split('-', s)
+        return list(map(float, elements))
+    else:
+        return None
+    
+def find_min_prediction_length(arr, x):
+    if x is None:
+        return x
+    for value in arr:
+        if value >= x:
+            return value
+    return None
+
+
+def find_best_epoch(ckpt_folder):
+    """
+    Find the highest epoch in the Test Tube file structure.
+    :param ckpt_folder: dir where the checpoints are being saved.
+    :return: Integer of the highest epoch reached by the checkpoints.
+    """
+    pattern = r"val_CRPS=([0-9]*\.[0-9]+)"
+    ckpt_files = os.listdir(ckpt_folder)  # list of strings
+    epochs = []
+    for filename in ckpt_files:
+        match = re.search(pattern, filename)
+        if match:  
+            epochs.append(match.group(1))
+    # epochs = [float(filename[18:-5]) for filename in ckpt_files]  # 'epoch={int}.ckpt' filename format
+    best_crps = min(epochs)
+    
+    best_epoch = epochs.index(best_crps)
+    return best_epoch, ckpt_files[best_epoch]
+
+
+def get_wandb_config_dict(wandb, config_args):
+    config_dict = {}
+    args = config_args.model.forecaster
+
+    if "init_args" in args:
+        for key, value in args["init_args"].items():
+            if wandb['target_config'] is not None and key in wandb['target_config']:
+                # continue
+                config_dict[key] = value
+
+    config_dict["dataset"] = config_args.data.data_manager["init_args"]["dataset"]
+    config_dict["pred_len"] = config_args.data.data_manager["init_args"]["prediction_length"]
+    config_dict["context_length"] = config_args.data.data_manager["init_args"]["context_length"]
+    config_dict["train_pred_len"] = config_args.data.data_manager["init_args"]["train_pred_len_list"]
+    config_dict["train_ctx_len_list"] = config_args.data.data_manager["init_args"]["train_ctx_len_list"]
+    config_dict["val_pred_len_list"] = config_args.data.data_manager["init_args"]["val_pred_len_list"]
+    return config_dict

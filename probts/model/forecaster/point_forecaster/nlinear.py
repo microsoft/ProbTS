@@ -26,6 +26,12 @@ class NLinear(Forecaster):
             )
         else:
             self.enc_linear = nn.Identity()
+            
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
 
         self.target_dim = self.target_dim
         self.individual = individual

@@ -28,6 +28,12 @@ class TimesFM(Forecaster):
         super().__init__(**kwargs)
         self.no_training = True
         
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+        
         if (type(self.target_dim).__name__=='dict'):
             for dataset_name in self.target_dim:
                 target_dim = target_dim[dataset_name]
@@ -35,13 +41,6 @@ class TimesFM(Forecaster):
         else:
             freq = self.freq
                 
-        if (type(self.context_length).__name__=='list'):
-            context_length = context_length[0]
-            
-        if (type(self.prediction_length).__name__=='list'):
-            # prediction_length = prediction_length[0]
-            prediction_length = max(prediction_length)
-        
         self.tfm = TimesFm(
             context_len=self.context_length,
             horizon_len=self.prediction_length,
@@ -57,21 +56,20 @@ class TimesFM(Forecaster):
         freq = freq.lower()
         
         if freq in freq_dict:
-            self.freq_int = freq_dict[freq]
+            self.local_freq = freq_dict[freq]
         else:
-            self.freq_int = 0
+            self.local_freq = 0
 
-        print(f"TimesFM - frequency: {freq}, freq_num: {self.freq_int}")
+        print(f"TimesFM - frequency: {freq}, freq_num: {self.local_freq}")
     
 
     def forecast(self, batch_data, num_samples=None):
         inputs = self.get_inputs(batch_data, 'encode')
         inputs = inputs[:, -self.context_length:].cpu()
         B, _, K = inputs.shape
-        # past_target = batch_data.past_target_cdf[:, -self.context_length:]
-        
+
         inputs = np.array(rearrange(inputs, 'b l k -> (b k) l'))
-        frequency_input = [self.freq_int] * inputs.shape[0]
+        frequency_input = [self.local_freq] * inputs.shape[0]
         
         _, out = self.tfm.forecast(
             inputs,
