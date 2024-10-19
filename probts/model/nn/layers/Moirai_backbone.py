@@ -278,8 +278,9 @@ class MoiraiBackbone(L.LightningModule):
                 )
             val_loss = torch.stack(val_loss)
             preds = torch.stack(preds)
+            # reprs_list = torch.stack(reprs_list)
             idx = val_loss.argmin(dim=0)
-            return preds[idx, torch.arange(len(idx), device=idx.device)], reprs_list[idx]
+            return preds[idx, torch.arange(len(idx), device=idx.device)], None
         else:
             distr, reprs = self._get_distr(
                 self.hparams.patch_size,

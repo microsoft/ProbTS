@@ -1,8 +1,9 @@
 [build-system]
 requires = ["setuptools>=66"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "ProbTS"
+name = "probts"
 version = "0.1.0"
 description = "Benchmarking Point and Distributional Forecasting across Diverse Prediction Horizons"
 authors = [
@@ -18,11 +19,11 @@ license = {text = "MIT"}
 dependencies = [
     "numpy",
     "pandas",
-    "einops",
+    "einops==0.7.*",
     "matplotlib",
     "tqdm",
     "lightning @ https://github.com/Lightning-AI/lightning/archive/refs/heads/master.zip",
-    "gluonts==0.13.1",
+    "gluonts~=0.14.3",
     "typeshed-client==2.3.0",
     "docstring-parser==0.15",
     "orjson==3.9.0",
@@ -31,7 +32,7 @@ dependencies = [
     "linear-attention-transformer==0.19.1",
     "ray==2.8.1",
     "tensorboardx==2.6.2",
-    "pyarrow==11.0.0",
+    "pyarrow>=12.0.0",
     "protobuf>=3.19",
     "jsonargparse[signatures]==4.27.7",
     "opt_einsum",
@@ -66,7 +67,7 @@ tsfm = [
 ]
 
 [tool.setuptools]
-py-modules = []
+py-modules = ["probts"]
 
 [tool.pytest.ini_options]
 pythonpath = [

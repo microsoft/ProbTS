@@ -92,6 +92,8 @@ class Moirai(Forecaster):
             )
             forecasts = forecasts.squeeze(-1)
             forecasts = rearrange(forecasts, '(b k) n l -> b n l k', b=B, k=K)
+            emb = rearrange(emb, '(b k) n l -> b n l k', b=B, k=K)
         else:
             raise ValueError(f"Unknown variate mode: {self.variate_mode}")
-        return forecasts.squeeze().transpose(0,1), emb
+        # print(forecasts.shape, emb.shape)
+        return forecasts.squeeze(1).transpose(0,1), emb
