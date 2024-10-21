@@ -1,6 +1,6 @@
 # ElasTST (NeurIPS 2024)
 
-This is an offical implementation of ElasTST: Towards Robust Varied-Horizon Forecasting with Elastic Time-Series Transformer.
+This `elastst` branch is the official implementation of “ElasTST: Towards Robust Varied-Horizon Forecasting with Elastic Time-Series Transformer”. It is designed to reproduce all results reported in the paper.
 
 
 ## Key Designs 💡
