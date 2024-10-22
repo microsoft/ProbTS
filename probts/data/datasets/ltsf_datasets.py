@@ -8,8 +8,8 @@
 
 import os
 import pandas as pd
-from .time_features import time_features
-from .monash_datasets import convert_monash_data_to_dataframe, monash_format_convert
+from probts.data.data_utils.time_features import time_features
+from probts.data.datasets.monash_datasets import convert_monash_data_to_dataframe, monash_format_convert
 import numpy as np
 
 def get_LTSF_info(dataset, data_path=None, freq=None):

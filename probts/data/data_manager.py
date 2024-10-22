@@ -1,17 +1,19 @@
 import torch
-from copy import deepcopy
 from pathlib import Path
 
-from gluonts.dataset.common import ListDataset
-from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.repository import dataset_names, datasets
 from gluonts.dataset.multivariate_grouper import MultivariateGrouper
 
-from .ltsf_datasets import get_LTSF_info, get_LTSF_borders, get_LTSF_Dataset
-from .stsf_datasets import GluonTSDataset
-from .time_features import get_lags
+from probts.data.datasets.ltsf_datasets import get_LTSF_info, get_LTSF_borders, get_LTSF_Dataset
+from probts.data.datasets.stsf_datasets import GluonTSDataset
+from probts.data.datasets.multi_horizon_datasets import MultiHorizonDataset
 
-from probts.utils import StandardScaler, TemporalScaler, IdentityScaler
+from probts.data.data_utils.time_features import get_lags
+from probts.data.data_utils.data_utils import split_train_val, truncate_test, get_rolling_test, df_to_mvds
+from probts.data.data_wrapper import ProbTSBatchData
+from probts.utils.utils import ensure_list
+from probts.data.data_utils.data_scaler import StandardScaler, TemporalScaler, IdentityScaler
+from typing import Union
 import sys
 
 MULTI_VARIATE_DATASETS = [
@@ -24,51 +26,6 @@ MULTI_VARIATE_DATASETS = [
     'wiki2000_nips'
 ]
 
-
-class ProbTSBatchData:
-    input_names_ = [
-        'target_dimension_indicator',
-        'past_time_feat',
-        'past_target_cdf',
-        'past_observed_values',
-        'past_is_pad',
-        'future_time_feat',
-        'future_target_cdf',
-        'future_observed_values',
-    ]
-    
-    def __init__(self, data_dict, device):
-        self.__dict__.update(data_dict)
-        if len(self.__dict__['past_target_cdf'].shape) == 2:
-            self.expand_dim()
-        self.set_device(device)
-        self.fill_inputs()
-        self.process_pad()
-
-    def fill_inputs(self):
-        for input in self.input_names_:
-            if input not in self.__dict__:
-                self.__dict__[input] = None
-
-    def set_device(self, device):
-        for k, v in self.__dict__.items():
-            if v is not None:
-                v.to(device)
-        self.device = device
-
-    def expand_dim(self):
-        self.__dict__["target_dimension_indicator"] = self.__dict__["target_dimension_indicator"][:, :1]
-        for input in ['past_target_cdf','past_observed_values','future_target_cdf','future_observed_values']:
-            self.__dict__[input] = self.__dict__[input].unsqueeze(-1)
-
-    def process_pad(self):
-        if self.__dict__['past_is_pad'] is not None:
-            self.__dict__["past_observed_values"] = torch.min(
-                self.__dict__["past_observed_values"],
-                1 - self.__dict__["past_is_pad"].unsqueeze(-1)
-            )
-
-
 class DataManager:
 
     def __init__(
@@ -76,8 +33,12 @@ class DataManager:
         dataset,
         path: str = './datasets',
         history_length: int = None,
-        context_length: int = None,
-        prediction_length: int = None,
+        context_length: Union[list,int,str] = None,
+        prediction_length: Union[list,int,str] = None,
+        train_ctx_len_list: Union[list,int,str] = None,
+        train_pred_len_list: Union[list,int,str] = None,
+        val_pred_len_list: Union[list,int,str] = None,
+        val_ctx_len_list: Union[list,int,str] = None,
         test_rolling_length: int = 96,
         split_val: bool = True,
         scaler: str = 'none',
@@ -88,15 +49,18 @@ class DataManager:
         data_path: str = None,
         freq: str = None,
         multivariate: bool = True,
+        continous_sample: bool = False,
     ):
         self.dataset = dataset
-        self.test_rolling_length = test_rolling_length
         self.global_mean = None
         self.multivariate = multivariate 
         self.split_val = split_val
         self.test_sampling = test_sampling
         self.timeenc = timeenc
         self.var_specific_norm = var_specific_norm
+        self.continous_sample = continous_sample
+        self.test_rolling_length = test_rolling_length
+        self.test_rolling_dict = {'h': 24, 'd': 7, 'b':5, 'w':4, 'min': 60}
 
         if scaler == 'standard':
             self.scaler = StandardScaler(var_specific=self.var_specific_norm)
@@ -104,11 +68,31 @@ class DataManager:
             self.scaler = TemporalScaler()
         else:
             self.scaler = IdentityScaler()
-    
+
+        # covert str to list to support multi-horizon training & inference
+        self.test_pred_len_list = ensure_list(prediction_length, default_value=prediction_length)
+        self.pred_len_list = ensure_list(train_pred_len_list, default_value=prediction_length)
+        self.ctx_len_list = ensure_list(train_ctx_len_list, default_value=context_length)
+        self.val_pred_len_list = ensure_list(val_pred_len_list, default_value=prediction_length)
+        self.val_ctx_len_list = ensure_list(val_ctx_len_list, default_value=context_length)
+        
+        self.multi_hor = True
+        # if multiple horizons assigned, using MultiHorizonDataset
+        if prediction_length is None:
+            self.multi_hor = False
+        else:
+            if len(self.pred_len_list) == 1 and len(self.val_pred_len_list) == 1 and len(self.test_pred_len_list) == 1:
+                if self.val_pred_len_list[0] == self.test_pred_len_list[0] and self.pred_len_list[0] == self.test_pred_len_list[0]:
+                    self.multi_hor = False
+            
+            
         if dataset in dataset_names:
             """
             Use gluonts to load short-term datasets.
             """
+            if self.multi_hor:
+                raise ValueError("Short-term forecasting do not support multi-horizon training or inference. ]")
+
             print("Loading Short-term Datasets: {dataset}".format(dataset=dataset))
             self.dataset_raw = datasets.get_dataset(dataset, path=Path(path), regenerate=False)
 
@@ -145,14 +129,29 @@ class DataManager:
 
             # Meta parameters
             self.lags_list = get_lags(self.freq)
-            self.prediction_length = prediction_length
-            self.context_length = context_length
-            self.history_length = (self.context_length + max(self.lags_list)) \
-                if history_length is None else history_length
+            if self.multi_hor:
+                self.prediction_length = ensure_list(prediction_length, default_value=prediction_length)
+                self.context_length = ensure_list(context_length, default_value=context_length)
+                self.history_length = (max(self.context_length) + max(self.lags_list)) \
+                    if history_length is None else history_length
+            else:
+                self.prediction_length = prediction_length
+                self.context_length = context_length
+                self.history_length = (self.context_length + max(self.lags_list)) \
+                    if history_length is None else history_length
 
+            # define the test_rolling_length
+            if self.test_rolling_length is None:
+                if self.freq.lower() in self.test_rolling_dict:
+                    self.test_rolling_length = self.test_rolling_dict[self.freq.lower()]
+                else:
+                    self.test_rolling_length = 24
             self.prepare_LTSF_dataset()
 
-        print(f"context_length: {self.context_length}, prediction_length: {self.prediction_length}")
+        print(f"test context_length: {self.context_length}, test prediction_length: {self.prediction_length}")
+        print(f"validation context_length: {self.val_ctx_len_list}, validation prediction_length: {self.val_pred_len_list}")
+        print(f"training context lengths: {self.ctx_len_list}, training prediction lengths: {self.pred_len_list}")
+        print(f"test_rolling_length: {self.test_rolling_length}")
         if scaler == 'standard':
             print(f"variate-specific normalization: {self.var_specific_norm}")
 
@@ -163,9 +162,9 @@ class DataManager:
         
         self.scaler.fit(torch.tensor(train_data.values))
         
-        train_set = self.df_to_mvds(train_data, freq=self.freq)
-        val_set = self.df_to_mvds(val_data,freq=self.freq)
-        test_set = self.df_to_mvds(test_data,freq=self.freq)
+        train_set = df_to_mvds(train_data, freq=self.freq)
+        val_set = df_to_mvds(val_data,freq=self.freq)
+        test_set = df_to_mvds(test_data,freq=self.freq)
         
         train_grouper = MultivariateGrouper(max_target_dim=self.target_dim)
         test_grouper = MultivariateGrouper(max_target_dim=self.target_dim)
@@ -174,109 +173,53 @@ class DataManager:
         group_val_set = test_grouper(val_set)
         group_test_set = test_grouper(test_set)
         
-        group_val_set = self.get_rolling_test(group_val_set, self.border_begin[1], self.border_end[1], rolling_length=self.test_rolling_length)
-        group_test_set = self.get_rolling_test(group_test_set, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length)
+        # group_val_set = get_rolling_test(group_val_set, self.prediction_length, self.border_begin[1], self.border_end[1], rolling_length=self.test_rolling_length, freq=self.freq)
+        # group_test_set = get_rolling_test(group_test_set, self.prediction_length, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length, freq=self.freq)
         
-        stsf_dataset_loader = GluonTSDataset(
-            ProbTSBatchData.input_names_, 
-            self.history_length,
-            self.prediction_length,
-            self.freq,
-            self.multivariate
-        )
-        
-        self.train_iter_dataset = stsf_dataset_loader.get_iter_dataset(group_train_set, mode='train', data_stamp=self.data_stamp[: self.border_end[0]])
-        self.val_iter_dataset = stsf_dataset_loader.get_iter_dataset(group_val_set, mode='val', data_stamp=self.data_stamp[: self.border_end[1]])
-        self.test_iter_dataset = stsf_dataset_loader.get_iter_dataset(group_test_set, mode='test', data_stamp=self.data_stamp[: self.border_end[2]])
-        self.time_feat_dim = stsf_dataset_loader.time_feat_dim
-        self.global_mean = torch.mean(torch.tensor(group_train_set[0]['target']), dim=-1)
-
-    def df_to_mvds(self, df, freq='H'):
-        datasets = []
-        for variable in df.keys():
-            ds = {"item_id" : variable, "target" : df[variable], "start": str(df.index[0])}
-            datasets.append(ds)
-        dataset = ListDataset(datasets,freq=freq)
-        return dataset
-
-    def get_rolling_test(self, test_set, border_begin_idx, border_end_idx, rolling_length):
-        if (border_end_idx - border_begin_idx - self.prediction_length) < 0:
-            raise ValueError("The time steps in validation / testing set is less than prediction length.")
-        
-        num_test_dates = int(((border_end_idx - border_begin_idx - self.prediction_length) / rolling_length)) + 1
-        print("num_test_dates: ", num_test_dates)
-
-        test_set = next(iter(test_set))
-        rolling_test_seq_list = list()
-        for i in range(num_test_dates):
-            rolling_test_seq = deepcopy(test_set)
-            rolling_end = border_begin_idx + self.prediction_length + i * rolling_length
-            rolling_test_seq[FieldName.TARGET] = rolling_test_seq[FieldName.TARGET][:, :rolling_end]
-            rolling_test_seq_list.append(rolling_test_seq)
-
-        rolling_test_set = ListDataset(
-            rolling_test_seq_list, freq=self.freq, one_dim_target=False
-        )
-        return rolling_test_set
-
-    def split_train_val(self, train_set):
-        trunc_train_list = []
-        val_set_list = []
-        univariate = False
-
-        for train_seq in iter(train_set):
-            # truncate train set
-            offset = self.num_test_dates * self.prediction_length
-            trunc_train_seq = deepcopy(train_seq)
-
-            if len(train_seq[FieldName.TARGET].shape) == 1:
-                trunc_train_len = train_seq[FieldName.TARGET].shape[0] - offset
-                trunc_train_seq[FieldName.TARGET] = train_seq[FieldName.TARGET][:trunc_train_len]
-                univariate = True
-            elif len(train_seq[FieldName.TARGET].shape) == 2:
-                trunc_train_len = train_seq[FieldName.TARGET].shape[1] - offset
-                trunc_train_seq[FieldName.TARGET] = train_seq[FieldName.TARGET][:, :trunc_train_len]
-            else:
-                raise ValueError(f"Invalid Data Shape: {str(len(train_seq[FieldName.TARGET].shape))}")
-
-            trunc_train_list.append(trunc_train_seq)
-
-            # construct val set by rolling
-            for i in range(self.num_test_dates):
-                val_seq = deepcopy(train_seq)
-                rolling_len = trunc_train_len + self.prediction_length * (i+1)
-                if univariate:
-                    val_seq[FieldName.TARGET] = val_seq[FieldName.TARGET][trunc_train_len + self.prediction_length * (i-1) - self.context_length : rolling_len]
-                else:
-                    val_seq[FieldName.TARGET] = val_seq[FieldName.TARGET][:, :rolling_len]
+        if self.multi_hor:
+            self.val_iter_dataset = {}
+            self.test_iter_dataset = {}
+            dataset_loader = MultiHorizonDataset(
+                ProbTSBatchData.input_names_, 
+                self.context_length,
+                self.prediction_length,
+                self.freq,
+                self.ctx_len_list,
+                self.pred_len_list,
+                self.val_ctx_len_list,
+                self.val_pred_len_list,
+                self.multivariate,
+                self.continous_sample
+            )
+            # validation set
+            for pred_len in self.val_pred_len_list:
+                local_group_val_set = get_rolling_test('val', group_val_set, self.border_begin[1], self.border_end[1], rolling_length=self.test_rolling_length, pred_len=pred_len, freq=self.freq)
+                self.val_iter_dataset[str(pred_len)] = dataset_loader.get_iter_dataset(local_group_val_set, mode='val', data_stamp=self.data_stamp[: self.border_end[1]], pred_len=[pred_len])
                 
-                val_set_list.append(val_seq)
-
-        trunc_train_set = ListDataset(
-            trunc_train_list, freq=self.freq, one_dim_target=univariate
-        )
-
-        val_set = ListDataset(
-            val_set_list, freq=self.freq, one_dim_target=univariate
-        )
+            # testing set
+            for pred_len in self.prediction_length:
+                local_group_test_set = get_rolling_test('test', group_test_set, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length, pred_len=pred_len, freq=self.freq)
+                self.test_iter_dataset[str(pred_len)] = dataset_loader.get_iter_dataset(local_group_test_set, mode='test', data_stamp=self.data_stamp[: self.border_end[2]], pred_len=[pred_len])
         
-        return trunc_train_set, val_set
-
-    def truncate_test(self, test_set):
-        trunc_test_list = []
-        for test_seq in iter(test_set):
-            # truncate train set
-            trunc_test_seq = deepcopy(test_seq)
-
-            trunc_test_seq[FieldName.TARGET] = trunc_test_seq[FieldName.TARGET][- ( self.prediction_length * 2 + self.context_length):]
-
-            trunc_test_list.append(trunc_test_seq)
-
-        trunc_test_set = ListDataset(
-            trunc_test_list, freq=self.freq, one_dim_target=True
-        )
-
-        return trunc_test_set
+        else:
+            dataset_loader = GluonTSDataset(
+                ProbTSBatchData.input_names_, 
+                self.history_length,
+                self.prediction_length,
+                self.freq,
+                self.multivariate
+            )
+            # validation set
+            local_group_val_set = get_rolling_test('val', group_val_set, self.border_begin[1], self.border_end[1], rolling_length=self.test_rolling_length, pred_len=self.val_pred_len_list[0], freq=self.freq)
+            self.val_iter_dataset = dataset_loader.get_iter_dataset(local_group_val_set, mode='val', data_stamp=self.data_stamp[: self.border_end[1]])
+            # testing set
+            local_group_test_set = get_rolling_test('test', group_test_set, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length, pred_len=self.prediction_length, freq=self.freq)
+            self.test_iter_dataset = dataset_loader.get_iter_dataset(local_group_test_set, mode='test', data_stamp=self.data_stamp[: self.border_end[2]])
+        
+        self.train_iter_dataset = dataset_loader.get_iter_dataset(group_train_set, mode='train', data_stamp=self.data_stamp[: self.border_end[0]])
+        
+        self.time_feat_dim = dataset_loader.time_feat_dim
+        self.global_mean = torch.mean(torch.tensor(group_train_set[0]['target']), dim=-1)
     
     def prepare_STSF_dataset(self, dataset: str):
         if dataset in MULTI_VARIATE_DATASETS:
@@ -297,14 +240,14 @@ class DataManager:
             self.num_test_dates = 1
             train_set = self.dataset_raw.train
             test_set = self.dataset_raw.test
-            test_set = self.truncate_test(test_set)
+            test_set = truncate_test(test_set)
             
         if self.split_val:
-            train_set, val_set = self.split_train_val(train_set)
+            train_set, val_set = split_train_val(train_set, self.num_test_dates, self.context_length, self.prediction_length, self.freq)
         else:
             val_set = test_set
 
-        stsf_dataset_loader = GluonTSDataset(
+        dataset_loader = GluonTSDataset(
             ProbTSBatchData.input_names_, 
             self.history_length,
             self.prediction_length,
@@ -312,7 +255,7 @@ class DataManager:
             self.multivariate
         )
 
-        self.train_iter_dataset = stsf_dataset_loader.get_iter_dataset(train_set, mode='train')
-        self.val_iter_dataset = stsf_dataset_loader.get_iter_dataset(val_set, mode='val')
-        self.test_iter_dataset = stsf_dataset_loader.get_iter_dataset(test_set, mode='test')
-        self.time_feat_dim = stsf_dataset_loader.time_feat_dim
+        self.train_iter_dataset = dataset_loader.get_iter_dataset(train_set, mode='train')
+        self.val_iter_dataset = dataset_loader.get_iter_dataset(val_set, mode='val')
+        self.test_iter_dataset = dataset_loader.get_iter_dataset(test_set, mode='test')
+        self.time_feat_dim = dataset_loader.time_feat_dim

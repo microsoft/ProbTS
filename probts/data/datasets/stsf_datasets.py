@@ -29,7 +29,7 @@ from gluonts.transform import (
     TargetDimIndicator,
     TransformedDataset,
 )
-from .time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
+from probts.data.data_utils.time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
 
 
 class GluonTSDataset():

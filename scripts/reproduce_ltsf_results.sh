@@ -3,6 +3,7 @@ export CUDA_VISIBLE_DEVICES=0
 DATA_DIR=./datasets
 LOG_DIR=./exps
 
+
 CTX_LEN=96
 
 for DATASET in 'etth1' 'etth2' 'ettm1' 'ettm2' 'weather_ltsf' 'electricity_ltsf' 'exchange_ltsf' 'traffic_ltsf'

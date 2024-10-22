@@ -11,9 +11,9 @@
 import torch
 import torch.nn as nn
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers.Transformer_EncDec import Encoder, EncoderLayer
-from probts.model.nn.layers.SelfAttention_Family import FullAttention, AttentionLayer
-from probts.model.nn.layers.Embed import DataEmbedding_inverted
+from probts.model.nn.arch.TransformerModule.Transformer_EncDec import Encoder, EncoderLayer
+from probts.model.nn.arch.TransformerModule.SelfAttention_Family import FullAttention, AttentionLayer
+from probts.model.nn.arch.TransformerModule.Embed import DataEmbedding_inverted
 
 class iTransformer(Forecaster):
     def __init__(

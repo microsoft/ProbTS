@@ -11,9 +11,9 @@
 import torch
 import torch.nn as nn
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers.Embed import DataEmbedding_wo_pos
-from probts.model.nn.layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from probts.model.nn.layers.Autoformer_EncDec import Encoder, Decoder, EncoderLayer, DecoderLayer, my_Layernorm, series_decomp
+from probts.model.nn.arch.TransformerModule.Embed import DataEmbedding_wo_pos
+from probts.model.nn.arch.AutoformerModule.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
+from probts.model.nn.arch.AutoformerModule.Autoformer_EncDec import Encoder, Decoder, EncoderLayer, DecoderLayer, my_Layernorm, series_decomp
 
 
 class Autoformer(Forecaster):
@@ -26,15 +26,16 @@ class Autoformer(Forecaster):
         e_layers: int = 2,
         d_layers: int = 1,
         output_attention: bool = False,
-        d_ff: int = 512,
+        d_ff: int = 256,
         label_len: int = 48,
         embed: str = 'timeF',
         dropout: float = 0.1,
-        f_hidden_size: int = 512,
+        f_hidden_size: int = 256,
         **kwargs
     ):
         super().__init__(**kwargs)
-
+        if isinstance(self.context_length, list):
+            self.context_length = max(self.context_length)
         self.label_len = self.context_length
 
         # Decomp
@@ -93,7 +94,7 @@ class Autoformer(Forecaster):
         )
         self.loss_fn = nn.MSELoss(reduction='none')
         
-    def forward(self, inputs, enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None, *args, **kwargs):
+    def forward(self, inputs, pred_len, enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None, *args, **kwargs):
         B, _, _ = inputs.shape
 
         if self.use_time_feat:
@@ -107,8 +108,8 @@ class Autoformer(Forecaster):
             
         
         # decomp init
-        mean = torch.mean(past_target, dim=1).unsqueeze(1).repeat(1, self.prediction_length, 1)
-        zeros = torch.zeros([B, self.prediction_length, self.target_dim], device=past_target.device)
+        mean = torch.mean(past_target, dim=1).unsqueeze(1).repeat(1, pred_len, 1)
+        zeros = torch.zeros([B, pred_len, self.target_dim], device=past_target.device)
         seasonal_init, trend_init = self.decomp(past_target)
         # decoder input
         trend_init = torch.cat([trend_init[:, -self.label_len:, :], mean], dim=1)
@@ -122,18 +123,20 @@ class Autoformer(Forecaster):
                                                  trend=trend_init)
         # final
         dec_out = trend_part + seasonal_part
-        return dec_out[:, -self.prediction_length:, :]
+        return dec_out[:, -pred_len:, :]
 
     def loss(self, batch_data):
+        max_pred_len = batch_data.max_prediction_length if batch_data.max_prediction_length is not None else max(self.train_prediction_length)
         inputs = self.get_inputs(batch_data, 'all')
-        outputs = self(inputs)
+        outputs = self(inputs, max_pred_len)
         
         loss = self.loss_fn(batch_data.future_target_cdf, outputs)
         loss = self.get_weighted_loss(batch_data, loss)
         return loss.mean()
 
     def forecast(self, batch_data, num_samples=None):
+        max_pred_len = batch_data.future_target_cdf.shape[1]
         inputs = self.get_inputs(batch_data, 'all')
 
-        outputs = self(inputs)
+        outputs = self(inputs, max_pred_len)
         return outputs.unsqueeze(1)

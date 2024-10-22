@@ -5,7 +5,7 @@ import math
 import torch
 from torch import nn
 
-from .s4 import S4
+from probts.model.nn.arch.S4.s4 import S4
 
 
 class SinusoidalPositionEmbeddings(nn.Module):

@@ -6,186 +6,12 @@
 # We thank the authors for their contributions.
 # ---------------------------------------------------------------------------------
 
-
+import re
+import os
 import torch
 import numpy as np
 from typing import Optional, Dict
-
-
-class Scaler:
-    def __init__(self):
-        super().__init__()
-
-    def fit(self, values):
-        raise NotImplementedError
-
-    def transform(self, values):
-        raise NotImplementedError
-
-    def fit_transform(self, values):
-        raise NotImplementedError
-
-    def inverse_transform(self, values):
-        raise NotImplementedError
-
-
-class StandardScaler(Scaler):
-    def __init__(
-        self,
-        mean: float = None,
-        std: float = None,
-        epsilon: float = 1e-9,
-        var_specific: bool = True
-    ):
-        """
-        The class can be used to normalize PyTorch Tensors using native functions. The module does not expect the
-        tensors to be of any specific shape; as long as the features are the last dimension in the tensor, the module
-        will work fine.
-        
-        Args:
-            mean: The mean of the features. The property will be set after a call to fit.
-            std: The standard deviation of the features. The property will be set after a call to fit.
-            epsilon: Used to avoid a Division-By-Zero exception.
-            var_specific: If True, the mean and standard deviation will be computed per variate.
-        """
-        self.mean = mean
-        self.scale = std
-        self.epsilon = epsilon
-        self.var_specific = var_specific
-
-    def fit(self, values):
-        """
-        Args:
-            values: Input values should be a PyTorch tensor of shape (T, C) or (N, T, C), 
-                where N is the batch size, T is the timesteps and C is the number of variates.
-        """
-        dims = list(range(values.dim() - 1))
-        if not self.var_specific:
-            self.mean = torch.mean(values)
-            self.scale = torch.std(values)
-        else:
-            self.mean = torch.mean(values, dim=dims)
-            self.scale = torch.std(values, dim=dims)
-
-    def transform(self, values):
-        if self.mean is None:
-            return values
-
-        values = (values - self.mean.to(values.device)) / (self.scale.to(values.device) + self.epsilon)
-        return values.to(torch.float32)
-
-    def fit_transform(self, values):
-        self.fit(values)
-        return self.transform(values)
-
-    def inverse_transform(self, values):
-        if self.mean is None:
-            return values
-        
-        values = values * (self.scale.to(values.device) + self.epsilon)
-        values = values + self.mean.to(values.device)
-        return values
-
-
-class TemporalScaler(Scaler):
-    def __init__(
-        self,
-        minimum_scale:float = 1e-10,
-        time_first: bool = True
-    ):
-        """
-        The ``TemporalScaler`` computes a per-item scale according to the average
-        absolute value over time of each item. The average is computed only among
-        the observed values in the data tensor, as indicated by the second
-        argument. Items with no observed data are assigned a scale based on the
-        global average.
-
-        Args:
-            minimum_scale: default scale that is used if the time series has only zeros.
-            time_first: if True, the input tensor has shape (N, T, C), otherwise (N, C, T).
-        """
-        super().__init__()
-        self.scale = None
-        self.minimum_scale = torch.tensor(minimum_scale)
-        self.time_first = time_first
-
-    def fit(
-        self,
-        data: torch.Tensor,
-        observed_indicator: torch.Tensor = None
-    ):
-        """
-        Fit the scaler to the data.
-        
-        Args:
-            data: tensor of shape (N, T, C) if ``time_first == True`` or (N, C, T)
-                if ``time_first == False`` containing the data to be scaled
-
-            observed_indicator: observed_indicator: binary tensor with the same shape as
-                ``data``, that has 1 in correspondence of observed data points,
-                and 0 in correspondence of missing data points.
-
-        Note:
-            Tensor containing the scale, of shape (N, 1, C) or (N, C, 1).
-        """
-        if self.time_first:
-            dim = -2
-        else:
-            dim = -1
-
-        if observed_indicator is None:
-            observed_indicator = torch.ones_like(data)
-
-        # These will have shape (N, C)
-        num_observed = observed_indicator.sum(dim=dim)
-        sum_observed = (data.abs() * observed_indicator).sum(dim=dim)
-
-        # First compute a global scale per-dimension
-        total_observed = num_observed.sum(dim=0)
-        denominator = torch.max(total_observed, torch.ones_like(total_observed))
-        default_scale = sum_observed.sum(dim=0) / denominator
-
-        # Then compute a per-item, per-dimension scale
-        denominator = torch.max(num_observed, torch.ones_like(num_observed))
-        scale = sum_observed / denominator
-
-        # Use per-batch scale when no element is observed
-        # or when the sequence contains only zeros
-        scale = torch.where(
-            sum_observed > torch.zeros_like(sum_observed),
-            scale,
-            default_scale * torch.ones_like(num_observed),
-        )
-
-        self.scale = torch.max(scale, self.minimum_scale).unsqueeze(dim=dim).detach()
-
-    def transform(self, data):
-        return data / self.scale.to(data.device)
-
-    def fit_transform(self, data, observed_indicator=None):
-        self.fit(data, observed_indicator)
-        return self.transform(data)
-
-    def inverse_transform(self, data):
-        return data * self.scale.to(data.device)
-
-
-class IdentityScaler(Scaler):
-    """
-    No scaling is applied upon calling the ``IdentityScaler``.
-    """
-    def __init__(self, time_first: bool = True):
-        super().__init__()
-        self.scale = None
-        
-    def fit(self, data):
-        pass
-
-    def transform(self, data):
-        return data
-    
-    def inverse_transform(self, data):
-        return data
+import torch.nn as nn
 
 
 def repeat(tensor: torch.Tensor, n: int, dim: int = 0):
@@ -198,10 +24,12 @@ def extract(a, t, x_shape):
     return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
 
 
+    
 def weighted_average(
     x: torch.Tensor,
     weights: Optional[torch.Tensor] = None,
-    dim: int = None
+    dim: int = None,
+    reduce: str = 'mean',
 ):
     """
     Computes the weighted average of a given tensor across a given dim, masking
@@ -218,6 +46,8 @@ def weighted_average(
     """
     if weights is not None:
         weighted_tensor = torch.where(weights != 0, x * weights, torch.zeros_like(x))
+        if reduce != 'mean':
+            return weighted_tensor
         sum_weights = torch.clamp(
             weights.sum(dim=dim) if dim else weights.sum(), min=1.0
         )
@@ -225,4 +55,47 @@ def weighted_average(
             weighted_tensor.sum(dim=dim) if dim else weighted_tensor.sum()
         ) / sum_weights
     else:
-        return x.mean(dim=dim)
+        return x.mean(dim=dim) if dim else x
+    
+    
+def convert_to_list(s):
+    '''
+    Convert prediction length strings into list
+    e.g., '96-192-336-720' will be convert into [96,192,336,720]
+    Input: str, list, int
+    Returns: list
+    '''
+    if (type(s).__name__=='int'):
+        return [s]
+    elif (type(s).__name__=='list'):
+        return s
+    elif (type(s).__name__=='str'):
+        elements = re.split(r'\D+', s)
+        return list(map(int, elements))
+    else:
+        return None
+    
+def find_best_epoch(ckpt_folder):
+    """
+    Find the highest epoch in the Test Tube file structure.
+    :param ckpt_folder: dir where the checpoints are being saved.
+    :return: Integer of the highest epoch reached by the checkpoints.
+    """
+    pattern = r"val_CRPS=([0-9]*\.[0-9]+)"
+    ckpt_files = os.listdir(ckpt_folder)  # list of strings
+    epochs = []
+    for filename in ckpt_files:
+        match = re.search(pattern, filename)
+        if match:  
+            epochs.append(match.group(1))
+    # epochs = [float(filename[18:-5]) for filename in ckpt_files]  # 'epoch={int}.ckpt' filename format
+    best_crps = min(epochs)
+    
+    best_epoch = epochs.index(best_crps)
+    return best_epoch, ckpt_files[best_epoch]
+
+def ensure_list(input_value, default_value=None):
+    result = convert_to_list(input_value)
+    if result is None:
+        result = convert_to_list(default_value)
+    return result

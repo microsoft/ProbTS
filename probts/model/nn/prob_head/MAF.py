@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
-from .flow_model import FlowModel, BatchNorm, FlowSequential
+from probts.model.nn.prob_head.flow_model import FlowModel, BatchNorm, FlowSequential
 
 
 def create_masks(

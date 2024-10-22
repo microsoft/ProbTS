@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn.utils import weight_norm
 import math
-import sys
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, d_model, max_len=5000):

@@ -18,6 +18,14 @@ Specifically, ProbTS emphasizes the differences in their primary methodological 
 
 <div align=center> <img src="docs/figs/probts_framework.png" width = 95%/> </div>
 
+## News :sparkles:
+
+:triangular_flag_on_post: **Oct 2024**: ProbTS now includes the ElasTST model! Check out the [ElasTST branch](https://github.com/microsoft/ProbTS/tree/elastst) to reproduce all results reported in paper or run `bash scripts/run_elastst.sh` for a quick start.
+
+:triangular_flag_on_post: **Oct 2024**: The [camera-ready version](https://arxiv.org/abs/2310.07446) of ProbTS is now available, with more in-depth analyses on the impact of normalization.
+
+
+
 ## Available Models 🧩
 
 ProbTS includes both classical time-series models, specializing in long-term point forecasting or short-term distributional forecasting, and recent time-series foundation models that offer zero-shot and arbitrary-horizon forecasting capabilities for new time series.
@@ -36,6 +44,7 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 | [TimesNet](https://arxiv.org/abs/2210.02186) | Short- / Long-term | Point | Non-auto | `probts.model.forecaster.point_forecaster.TimesNet` |
 | [PatchTST](https://arxiv.org/abs/2211.14730) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.PatchTST` |
 | [iTransformer](https://arxiv.org/abs/2310.06625) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.iTransformer` |
+| ElasTST | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.ElasTST` |
 | [GRU NVP](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_NVP` |
 | [GRU MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_MAF` |
 | [Trans MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.Trans_MAF` |
@@ -322,10 +331,10 @@ Special thanks to the following repositories for their open-sourced code bases a
 
 If you have used ProbTS for research or production, please cite it as follows.
 ```tex
-@article{zhang2023probts,
+@inproceedings{zhang2024probts,
   title={{ProbTS}: Benchmarking Point and Distributional Forecasting across Diverse Prediction Horizons},
   author={Zhang, Jiawen and Wen, Xumeng and Zhang, Zhenwei and Zheng, Shun and Li, Jia and Bian, Jiang},
-  journal={arXiv preprint arXiv:2310.07446},
-  year={2023}
+  booktitle={NeurIPS},
+  year={2024}
 }
 ```

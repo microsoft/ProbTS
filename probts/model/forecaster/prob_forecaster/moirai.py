@@ -11,7 +11,7 @@
 from typing import Union
 from probts.model.forecaster import Forecaster
 from einops import rearrange, repeat 
-from probts.model.nn.layers.Moirai_backbone import MoiraiBackbone
+from probts.model.nn.arch.Moirai_backbone import MoiraiBackbone
 from uni2ts.model.moirai.module import MoiraiModule
 
 

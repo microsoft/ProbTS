@@ -13,7 +13,7 @@ import torch.nn as nn
 import numpy as np
 from einops import repeat
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers import diff_CSDI
+from probts.model.nn.prob_head.diffusion_layers import diff_CSDI
 
 
 class CSDI(Forecaster):
