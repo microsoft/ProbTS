@@ -36,10 +36,9 @@ class TimesFM(Forecaster):
             freq = self.freq
                 
         if (type(self.context_length).__name__=='list'):
-            context_length = context_length[0]
+            context_length = max(context_length)
             
         if (type(self.prediction_length).__name__=='list'):
-            # prediction_length = prediction_length[0]
             prediction_length = max(prediction_length)
         
         self.tfm = TimesFm(

@@ -13,7 +13,7 @@ DATASET='exchange_ltsf' # select from ['etth1', 'etth2', 'ettm1', 'ettm2', 'traf
 
 MODEL=elastst
 
-python run.py --config config/default/${MODEL}.yaml --seed_everything 0  \
+python run.py --config config/multi_hor/${MODEL}.yaml --seed_everything 0  \
     --data.data_manager.init_args.path ${DATA_DIR} \
     --trainer.default_root_dir ${LOG_DIR} \
     --data.data_manager.init_args.split_val true \

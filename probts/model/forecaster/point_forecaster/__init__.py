@@ -9,6 +9,7 @@ from .nhits import NHiTS
 from .timesnet import TimesNet
 from .itransformer import iTransformer
 from .autoformer import Autoformer
+from .tsmixer import TSMixer
 from .elastst import ElasTST
 
 # ------- add timesfm to sys.path ----------

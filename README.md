@@ -41,6 +41,7 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 | [N-HiTS](https://arxiv.org/abs/2201.12886) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NHiTS` |
 | [NLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NLinear` |
 | [DLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.DLinear` |
+| [TSMixer](https://arxiv.org/abs/2303.06053) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.TSMixer` |
 | [TimesNet](https://arxiv.org/abs/2210.02186) | Short- / Long-term | Point | Non-auto | `probts.model.forecaster.point_forecaster.TimesNet` |
 | [PatchTST](https://arxiv.org/abs/2211.14730) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.PatchTST` |
 | [iTransformer](https://arxiv.org/abs/2310.06625) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.iTransformer` |
@@ -145,7 +146,7 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
     # Long-term Forecasting
     ['etth1', 'etth2','ettm1','ettm2','traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf', 'caiso', 'nordpool']
     ```
-    Note: When utilizing long-term forecasting datasets, you must explicitly specify the `context_length` and `prediction_length` parameters. For example, to set a context length of 96 and a prediction length of 192, use the following command-line arguments:
+    *Note: When utilizing long-term forecasting datasets, you must explicitly specify the `context_length` and `prediction_length` parameters. For example, to set a context length of 96 and a prediction length of 192, use the following command-line arguments:*
     ```bash
     --data.data_manager.init_args.context_length 96 \
     --data.data_manager.init_args.prediction_length 192 \
@@ -175,9 +176,9 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
         --data.data_manager.init_args.multivariate true
         ```
 
-    Note 1: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.
+    *Note 1: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.*
 
-    Note 2: You can adjust the test instance sampling using the `--data.data_manager.init_args.test_rolling_length` parameter. The default value is `96`.
+    *Note 2: You can adjust the test instance sampling using the `--data.data_manager.init_args.test_rolling_length` parameter. The default value is `96`.*
 
 ### Checkpoints for Foundation Models
 
@@ -249,6 +250,39 @@ python run.py --config config/path/to/model.yaml \
 ```bash 
 ['etth1', 'etth2','ettm1','ettm2','traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf', 'caiso', 'nordpool']
 ```
+
+### Forecasting with Varied Prediction Lengths
+
+
+Conventional forecasting models typically require specific training and deployment for each prediction horizon. However, with the growing importance of varied-horizon forecasting, there is a need for models that can deliver robust predictions across multiple inference horizons after a single training phase.
+
+ProbTS has been updated to support varied-horizon forecasting by enabling the specification of distinct context and prediction lengths for the training, validation, and testing phases.
+
+**Example:**
+```bash 
+python run.py --config config/multi_hor/elastst.yaml \
+                --data.data_manager.init_args.path ./datasets \
+                --trainer.default_root_dir /path/to/log_dir/ \
+                --data.data_manager.init_args.dataset {DATASET_NAME} \
+                --data.data_manager.init_args.context_length ${CTX_LEN} \
+                --data.data_manager.init_args.prediction_length ${TEST_PRED_LEN} \
+                --data.data_manager.init_args.train_pred_len_list ${TRAIN_PRED_LEN} \
+                --data.data_manager.init_args.train_ctx_len_list ${TRAIN_CTX_LEN} \
+                --data.data_manager.init_args.val_pred_len_list ${VAL_PRED_LEN} \
+
+```
+
+- `DATASET_NAME`: Select from datasets used in long-term forecasting scenerios.
+- `CTX_LEN`: Context length in the validation and testing phase.
+- `TRAIN_CTX_LEN`: Context length in the training phase.
+- `TEST_PRED_LEN`: Forecasting horizons in the testing phase.
+- `VAL_PRED_LEN`: Forecasting horizons for performance validation.
+- `TRAIN_PRED_LEN`: Forecasting horizons in the training phase.
+
+For detailed information on the configuration, refer to the [documentation](./docs/documentation/README.md#forecasting-with-varied-prediction-lengths).
+
+*Note: Currently, this feature is only supported by ElasTST, Autoformer, and foundation models.*
+
 
 ## Benchmarking :balance_scale:
 

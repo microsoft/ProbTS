@@ -13,37 +13,41 @@
 
 | Config Name | Type | Description |
 | --- | --- | --- |
-| `trainer.max_epochs` | integer | Maximum number of training epochs. |
-| `trainer.limit_train_batches` | integer | Limits the number of training batches per epoch. |
-| `trainer.check_val_every_n_epoch` | integer | Perform validation every n training epochs. |
-| `trainer.default_root_dir` | integer | Default path for logs and weights. |
-| `trainer.accumulate_grad_batches` | integer | Number of batches to accumulate gradients before updating. |
+| `trainer.max_epochs` | `int` | Maximum number of training epochs. |
+| `trainer.limit_train_batches` | `int` | Limits the number of training batches per epoch. |
+| `trainer.check_val_every_n_epoch` | `int` | Perform validation every n training epochs. |
+| `trainer.default_root_dir` | `int` | Default path for logs and weights. |
+| `trainer.accumulate_grad_batches` | `int` | Number of batches to accumulate gradients before updating. |
 
 ### Model
 
 | Config Name | Type | Description |
 | --- | --- | --- |
-| `model.forecaster.class_path` | string | Forecaster module path (e.g., `probts.model.forecaster.point_forecaster.PatchTST`). |
+| `model.forecaster.class_path` | `str` | Forecaster module path (e.g., `probts.model.forecaster.point_forecaster.PatchTST`). |
 | `model.forecaster.init_args.{ARG}` | - | Model-specific hyperparameters. |
-| `model.num_samples` | integer | Number of samples per distribution during evaluation. |
-| `model.learning_rate` | float | Learning rate. |
-| `model.quantiles_num` | integer | Number of quantiles for evaluation. |
-
+| `model.num_samples` | `int` | Number of samples per distribution during evaluation. |
+| `model.learning_rate` | `float` | Learning rate. |
+| `model.quantiles_num` | `int` | Number of quantiles for evaluation. |
+| `model.sampling_weight_scheme` | `str`  | The scheme of training horizon reweighting. Options: ['random', 'none', 'const'].|
 
 ### Data
 
 | Config Name | Type | Description |
 | --- | --- | --- |
-| `data.data_manager.init_args.dataset` | string | Dataset for training and evaluation. |
-| `data.data_manager.init_args.path` | string | Path to the dataset folder. |
-| `data.data_manager.init_args.split_val` | boolean | Whether to split a validation set during training. |
-| `data.data_manager.init_args.scaler` | string | Scaler type: `identity`, `standard` (z-score normalization), or `temporal` (scale based on average temporal absolute value). |
-| `data.data_manager.init_args.context_length` | integer | Length of observation window (required for long-term forecasting). |
-| `data.data_manager.init_args.prediction_length` | integer | Forecasting horizon length (required for long-term forecasting). |
-| `data.data_manager.init_args.target_dim` | integer | The number of variates. |
-| `data.data_manager.init_args.var_specific_norm` | boolean | If conduct per-variate normalization or not. |
-| `data.data_manager.init_args.timeenc` | integer | Time feature type. Select from `[0,1,2]`. See the explaination below for details. |
-| `data.batch_size` | integer | Batch size. |
+| `data.data_manager.init_args.dataset` | `str` | Dataset for training and evaluation. |
+| `data.data_manager.init_args.path` | `str` | Path to the dataset folder. |
+| `data.data_manager.init_args.split_val` | `bool` | Whether to split a validation set during training. |
+| `data.data_manager.init_args.scaler` | `str` | Scaler type: `identity`, `standard` (z-score normalization), or `temporal` (scale based on average temporal absolute value). |
+| `data.data_manager.init_args.target_dim` | `int` | The number of variates. |
+| `data.data_manager.init_args.var_specific_norm` | `bool` | If conduct per-variate normalization or not. |
+| `data.data_manager.init_args.timeenc` | `int` | Time feature type. Select from `[0,1,2]`. See the explaination below for details. |
+| `data.data_manager.init_args.context_length`    | `Union[str, int, list]`       | Length of observation window in inference phase. |
+| `data.data_manager.init_args.prediction_length` | `Union[str, int, list]`       | Forecasting horizon length in inference phase. |
+| `data.data_manager.init_args.val_pred_len_list` | `Union[str, int, list]`       | Forecasting horizon length for performance validation. |
+| `data.data_manager.init_args.train_pred_len_list`| `Union[str, int, list]`      | Length of observation window in training phase. |
+| `data.data_manager.init_args.train_ctx_len_list` | `Union[str, int, list]`      | Forecasting horizons in training phase. |
+| `data.data_manager.init_args.continous_sample`  | `bool`   | If True, sampling horizons from `[min(train_pred_len_list), max(train_pred_len_list)]`, else sampling within the set `train_pred_len_list`.|
+| `data.batch_size` | `int` | Batch size. |
 
 #### Temporal Features
 
@@ -63,7 +67,7 @@ For the datasets used for long-term forecasting scenario, we support three types
     freq_map = {'h': 4, 't': 5, 's': 6, 'm': 1, 'a': 1, 'w': 2, 'd': 3, 'b': 3}
     ```
 
-    Note: timeenc = 0 if model.embed != 'timeF' else 1.
+    *Note: timeenc = 0 if model.embed != 'timeF' else 1.*
 
 - **[timeenc 2] Raw date information**
 
@@ -212,4 +216,83 @@ Run the customized model using the configuration file:
 
 ```bash
 python run.py --config config/path/to/model.yaml
+```
+
+
+## Forecasting with Varied Prediction Lengths
+
+
+**Example:**
+```bash 
+python run.py --config config/multi_hor/elastst.yaml \
+                --data.data_manager.init_args.path ./datasets \
+                --trainer.default_root_dir /path/to/log_dir/ \
+                --data.data_manager.init_args.dataset {DATASET_NAME} \
+                --data.data_manager.init_args.context_length ${CTX_LEN} \
+                --data.data_manager.init_args.prediction_length ${TEST_PRED_LEN} \
+                --data.data_manager.init_args.train_pred_len_list ${TRAIN_PRED_LEN} \
+                --data.data_manager.init_args.train_ctx_len_list ${TRAIN_CTX_LEN} \
+                --data.data_manager.init_args.val_pred_len_list ${VAL_PRED_LEN} 
+```
+
+- `DATASET_NAME`: Select from datasets used in long-term forecasting scenerios.
+- `CTX_LEN`: Context length in the validation and testing phase.
+- `TRAIN_CTX_LEN`: Context length in the training phase.
+- `TEST_PRED_LEN`: Forecasting horizons in the testing phase.
+- `VAL_PRED_LEN`: Forecasting horizons for performance validation.
+- `TRAIN_PRED_LEN`: Forecasting horizons in the training phase.
+
+The results across multiple horizons will be saved to: 
+```bash 
+/path/to/log_dir/{DATASET_NAME}_{MODEL}_{seed}_TrainCTX_{TRAIN_CTX_LEN}_TrainPRED_{TRAIN_PRED_LEN}_ValCTX_{CTX_LEN}_ValPRED_{VAL_PRED_LEN}/horizons_results.csv
+```
+
+### Example 1: Varied-Horizon Training
+
+**Mode 1: Random sampling from a set of horizons**
+
+```bash 
+python run.py --config config/multi_hor/elastst.yaml \
+                --data.data_manager.init_args.path ./datasets \
+                --trainer.default_root_dir /path/to/log_dir/ \
+                --data.data_manager.init_args.dataset ${DATASET} \
+                --data.data_manager.init_args.context_length 96 \
+                --data.data_manager.init_args.prediction_length 720 \
+                --data.data_manager.init_args.train_ctx_len_list 96 \
+                --data.data_manager.init_args.val_pred_len_list 720 \
+                # random selection from {96, 192, 336, 720}
+                --data.data_manager.init_args.train_pred_len_list 96-192-336-720 \
+                --data.data_manager.init_args.continous_sample false 
+```
+
+**Mode 2: Random sampling from a horizon range**
+
+```bash 
+python run.py --config config/multi_hor/elastst.yaml \
+                --data.data_manager.init_args.path ./datasets \
+                --trainer.default_root_dir /path/to/log_dir/ \
+                --data.data_manager.init_args.dataset ${DATASET} \
+                --data.data_manager.init_args.context_length 96 \
+                --data.data_manager.init_args.prediction_length 720 \
+                --data.data_manager.init_args.train_ctx_len_list 96 \
+                --data.data_manager.init_args.val_pred_len_list 720 \
+                # random sampling from [1, 720]
+                --data.data_manager.init_args.train_pred_len_list 1-720 \ 
+                --data.data_manager.init_args.continous_sample true 
+```
+
+### Example 2: Validation and Testing with Multiple Horizons
+
+```bash 
+python run.py --config config/multi_hor/elastst.yaml \
+                --data.data_manager.init_args.path ./datasets \
+                --trainer.default_root_dir /path/to/log_dir/ \
+                --data.data_manager.init_args.dataset ${DATASET} \
+                --data.data_manager.init_args.context_length 96 \
+                --data.data_manager.init_args.train_pred_len_list 720 \ 
+                --data.data_manager.init_args.train_ctx_len_list 96 \
+                # validation on {96, 192, 336, 720}
+                --data.data_manager.init_args.val_pred_len_list 96-192-336-720 \
+                # testing on {24, 96, 192, 336, 720, 1024}
+                --data.data_manager.init_args.prediction_length 24-96-192-336-720-1024 
 ```

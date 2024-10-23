@@ -32,6 +32,12 @@ class TinyTimeMixer(Forecaster):
         # Use main for 512-96 model
         # Use "1024_96_v1" for 1024-96 model
         TTM_MODEL_REVISION = "main"
+        
+        if (type(self.context_length).__name__=='list'):
+            context_length = max(context_length)
+            
+        if (type(self.prediction_length).__name__=='list'):
+            prediction_length = max(prediction_length)
 
         self.zeroshot_model = TinyTimeMixerForPrediction.from_pretrained(
             "ibm/TTM", revision=TTM_MODEL_REVISION
