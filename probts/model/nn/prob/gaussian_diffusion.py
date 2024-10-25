@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
-from probts.model.nn.prob_head.diffusion_layers import DiffusionEmbedding
+from probts.model.nn.prob.diffusion_layers import DiffusionEmbedding
 from functools import partial
 from inspect import isfunction
 

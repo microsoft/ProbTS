@@ -11,7 +11,7 @@
 import copy
 import torch
 import torch.nn as nn
-from probts.model.nn.prob_head.flow_model import FlowModel, BatchNorm, FlowSequential
+from probts.model.nn.prob.flow_model import FlowModel, BatchNorm, FlowSequential
 
 
 class LinearMaskedCoupling(nn.Module):

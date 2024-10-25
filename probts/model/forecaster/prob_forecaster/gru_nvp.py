@@ -14,7 +14,7 @@ import torch.nn as nn
 from probts.data import ProbTSBatchData
 from probts.utils import repeat
 from probts.model.forecaster import Forecaster
-from probts.model.nn.prob_head.RealNVP import RealNVP
+from probts.model.nn.prob.RealNVP import RealNVP
 
 
 class GRU_NVP(Forecaster):
