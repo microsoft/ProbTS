@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=0
+# export CUDA_VISIBLE_DEVICES=0
 
 DATA_DIR=/path/to/datasets
 LOG_DIR=/path/to/log_dir

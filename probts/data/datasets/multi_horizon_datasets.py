@@ -46,25 +46,25 @@ class MultiHorizonDataset():
     def __init__(
         self,
         input_names: list,
-        context_length: Union[int, list],
-        prediction_length: Union[int, list],
         freq: str,
-        ctx_range: Union[int, list]=None,
-        pred_range: Union[int, list]=None,
-        val_ctx_range: Union[int, list]=None,
-        val_pred_range: Union[int, list]=None,
+        train_ctx_range: Union[int, list],
+        train_pred_range: Union[int, list],
+        val_ctx_range: Union[int, list],
+        val_pred_range: Union[int, list],
+        test_ctx_range: Union[int, list],
+        test_pred_range: Union[int, list],
         multivariate: bool = True,
-        continous_sample: bool = False,
+        continuous_sample: bool = False,
     ):
         super().__init__()
         self.input_names_ = input_names
-        self.ctx_range = ctx_range
-        self.pred_range = pred_range
+        self.train_ctx_range = train_ctx_range
+        self.train_pred_range = train_pred_range
         self.val_ctx_range = val_ctx_range
         self.val_pred_range = val_pred_range
-        self.context_length = context_length
-        self.prediction_length=prediction_length
-        self.continous_sample = continous_sample
+        self.test_ctx_range = test_ctx_range
+        self.test_pred_range=test_pred_range
+        self.continuous_sample = continuous_sample
         
         self.freq = freq
         if multivariate:
@@ -74,23 +74,23 @@ class MultiHorizonDataset():
 
     def get_sampler(self):
         # for training
-        train_min_past = min(self.ctx_range)
-        train_min_future = min(self.pred_range)
+        train_min_past = min(self.train_ctx_range)
+        train_min_future = min(self.train_pred_range)
         
         # for validation
         val_min_past = max(self.val_ctx_range)
         val_min_future = max(self.val_pred_range)
         
         # for testing
-        if (type(self.context_length).__name__=='list'):
-            test_min_past = max(self.context_length)
+        if (type(self.test_ctx_range).__name__=='list'):
+            test_min_past = max(self.test_ctx_range)
         else:
-            test_min_past=self.context_length
+            test_min_past=self.test_ctx_range
         
-        if (type(self.pred_range).__name__=='list'):
-            test_min_future = max(self.prediction_length)
+        if (type(self.test_pred_range).__name__=='list'):
+            test_min_future = max(self.test_pred_range)
         else:
-            test_min_future=self.prediction_length
+            test_min_future=self.test_pred_range
 
         self.train_sampler = ExpectedNumInstanceSampler(
             num_instances=1.0,
@@ -123,7 +123,7 @@ class MultiHorizonDataset():
             time_feature_func = AddCustomizedTimeFeatures
             
         if pred_len is None:
-            pred_len = max(self.pred_range)
+            pred_len = max(self.train_pred_range)
         else:
             pred_len = max(pred_len)
             
@@ -172,8 +172,8 @@ class MultiHorizonDataset():
         }[mode]
 
         if mode == "train":
-            past_length = self.ctx_range
-            future_length = self.pred_range
+            past_length = self.train_ctx_range
+            future_length = self.train_pred_range
         elif mode == 'val':
             past_length = self.val_ctx_range
             if pred_len is None:
@@ -181,9 +181,9 @@ class MultiHorizonDataset():
             else:
                 future_length = pred_len
         else:
-            past_length = self.context_length
+            past_length = self.test_ctx_range
             if pred_len is None:
-                future_length = self.prediction_length
+                future_length = self.test_pred_range
             else:
                 future_length = pred_len
             
@@ -197,7 +197,7 @@ class MultiHorizonDataset():
             past_length=past_length,
             future_length=future_length,
             mode=mode,
-            continous_sample=self.continous_sample,
+            continuous_sample=self.continuous_sample,
             time_series_fields=[
                 FieldName.FEAT_TIME,
                 FieldName.OBSERVED_VALUES,
@@ -296,7 +296,7 @@ class MultiHorizonSplitter(FlatMapTransformation):
         output_NTC: bool = True,
         time_series_fields: List[str] = [],
         dummy_value: float = 0.0,
-        continous_sample: bool = False,
+        continuous_sample: bool = False,
     ) -> None:
         super().__init__()
 
@@ -305,7 +305,7 @@ class MultiHorizonSplitter(FlatMapTransformation):
         self.instance_sampler = instance_sampler
         self.past_length = past_length
         self.future_length = future_length
-        self.continous_sample = continous_sample
+        self.continuous_sample = continuous_sample
         
         self.lead_time = lead_time
         self.output_NTC = output_NTC
@@ -348,7 +348,7 @@ class MultiHorizonSplitter(FlatMapTransformation):
         entry = entry.copy()
         
         if is_train:
-            if self.continous_sample:
+            if self.continuous_sample:
                 past_len = random.randint(min(self.past_length), max(self.past_length))
                 pred_len = random.randint(min(self.future_length), max(self.future_length))
             else:

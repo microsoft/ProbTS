@@ -7,7 +7,7 @@ TRAIN_CTX_LEN=96
 VAL_CTX_LEN=96
 TEST_CTX_LEN=96
 
-TRAIN_PRED_LEN=720
+TRAIN_PRED_LEN=1-720 
 VAL_PRED_LEN=720
 TEST_PRED_LEN=24-48-96-192-336-720
 
@@ -27,4 +27,5 @@ python run.py --config config/multi_hor/${MODEL}.yaml --seed_everything 0  \
     --data.data_manager.init_args.train_ctx_len ${TRAIN_CTX_LEN} \
     --data.data_manager.init_args.val_ctx_len ${VAL_CTX_LEN} \
     --data.data_manager.init_args.val_pred_len_list ${VAL_PRED_LEN} \
+    --data.data_manager.init_args.continuous_sample true \
     --trainer.max_epochs 50

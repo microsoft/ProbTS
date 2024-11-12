@@ -35,7 +35,7 @@ class ProbTSForecastModule(pl.LightningModule):
         self,
         forecaster: Forecaster,
         scaler: Scaler = None,
-        pred_len_list: list = None,
+        train_pred_len_list: list = None,
         num_samples: int = 100,
         learning_rate: float = 1e-3,
         quantiles_num: int = 10,
@@ -47,7 +47,7 @@ class ProbTSForecastModule(pl.LightningModule):
         self.num_samples = num_samples
         self.learning_rate = learning_rate
         self.load_from_ckpt = load_from_ckpt
-        self.pred_len_list = pred_len_list
+        self.train_pred_len_list = train_pred_len_list
         self.forecaster = forecaster
 
         self.scaler = scaler

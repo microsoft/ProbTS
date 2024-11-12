@@ -44,9 +44,10 @@
 | `data.data_manager.init_args.context_length`    | `Union[str, int, list]`       | Length of observation window in inference phase. |
 | `data.data_manager.init_args.prediction_length` | `Union[str, int, list]`       | Forecasting horizon length in inference phase. |
 | `data.data_manager.init_args.val_pred_len_list` | `Union[str, int, list]`       | Forecasting horizon length for performance validation. |
+| `data.data_manager.init_args.val_ctx_len`       | `Union[str, int, list]`      | Forecasting horizons for performance validation. |
 | `data.data_manager.init_args.train_pred_len_list`| `Union[str, int, list]`      | Length of observation window in training phase. |
-| `data.data_manager.init_args.train_ctx_len_list` | `Union[str, int, list]`      | Forecasting horizons in training phase. |
-| `data.data_manager.init_args.continous_sample`  | `bool`   | If True, sampling horizons from `[min(train_pred_len_list), max(train_pred_len_list)]`, else sampling within the set `train_pred_len_list`.|
+| `data.data_manager.init_args.train_ctx_len` | `Union[str, int, list]`      | Forecasting horizons in training phase. |
+| `data.data_manager.init_args.continuous_sample`  | `bool`   | If True, sampling horizons from `[min(train_pred_len_list), max(train_pred_len_list)]`, else sampling within the set `train_pred_len_list`.|
 | `data.batch_size` | `int` | Batch size. |
 
 #### Temporal Features
@@ -228,19 +229,21 @@ python run.py --config config/multi_hor/elastst.yaml \
                 --data.data_manager.init_args.path ./datasets \
                 --trainer.default_root_dir /path/to/log_dir/ \
                 --data.data_manager.init_args.dataset {DATASET_NAME} \
-                --data.data_manager.init_args.context_length ${CTX_LEN} \
+                --data.data_manager.init_args.context_length ${TEST_CTX_LEN} \
                 --data.data_manager.init_args.prediction_length ${TEST_PRED_LEN} \
+                --data.data_manager.init_args.train_ctx_len ${TRAIN_CTX_LEN} \
                 --data.data_manager.init_args.train_pred_len_list ${TRAIN_PRED_LEN} \
-                --data.data_manager.init_args.train_ctx_len_list ${TRAIN_CTX_LEN} \
+                --data.data_manager.init_args.val_ctx_len ${VAL_CTX_LEN} \
                 --data.data_manager.init_args.val_pred_len_list ${VAL_PRED_LEN} 
 ```
 
 - `DATASET_NAME`: Select from datasets used in long-term forecasting scenerios.
-- `CTX_LEN`: Context length in the validation and testing phase.
-- `TRAIN_CTX_LEN`: Context length in the training phase.
+- `TEST_CTX_LEN`: Context length in the testing phase.
+- `VAL_CTX_LEN` (Default: `TEST_CTX_LEN`): Context length in the validation phase.
+- `TRAIN_CTX_LEN` (Default: `TEST_CTX_LEN`): Context length in the training phase.
 - `TEST_PRED_LEN`: Forecasting horizons in the testing phase.
-- `VAL_PRED_LEN`: Forecasting horizons for performance validation.
-- `TRAIN_PRED_LEN`: Forecasting horizons in the training phase.
+- `VAL_PRED_LEN` (Default: `TEST_PRED_LEN`): Forecasting horizons for performance validation.
+- `TRAIN_PRED_LEN` (Default: `TEST_PRED_LEN`): Forecasting horizons in the training phase.
 
 The results across multiple horizons will be saved to: 
 ```bash 
@@ -258,11 +261,11 @@ python run.py --config config/multi_hor/elastst.yaml \
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length 96 \
                 --data.data_manager.init_args.prediction_length 720 \
-                --data.data_manager.init_args.train_ctx_len_list 96 \
+                --data.data_manager.init_args.train_ctx_len 96 \
                 --data.data_manager.init_args.val_pred_len_list 720 \
                 # random selection from {96, 192, 336, 720}
                 --data.data_manager.init_args.train_pred_len_list 96-192-336-720 \
-                --data.data_manager.init_args.continous_sample false 
+                --data.data_manager.init_args.continuous_sample false 
 ```
 
 **Mode 2: Random sampling from a horizon range**
@@ -274,11 +277,11 @@ python run.py --config config/multi_hor/elastst.yaml \
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length 96 \
                 --data.data_manager.init_args.prediction_length 720 \
-                --data.data_manager.init_args.train_ctx_len_list 96 \
+                --data.data_manager.init_args.train_ctx_len 96 \
                 --data.data_manager.init_args.val_pred_len_list 720 \
                 # random sampling from [1, 720]
                 --data.data_manager.init_args.train_pred_len_list 1-720 \ 
-                --data.data_manager.init_args.continous_sample true 
+                --data.data_manager.init_args.continuous_sample true 
 ```
 
 ### Example 2: Validation and Testing with Multiple Horizons
@@ -290,7 +293,7 @@ python run.py --config config/multi_hor/elastst.yaml \
                 --data.data_manager.init_args.dataset ${DATASET} \
                 --data.data_manager.init_args.context_length 96 \
                 --data.data_manager.init_args.train_pred_len_list 720 \ 
-                --data.data_manager.init_args.train_ctx_len_list 96 \
+                --data.data_manager.init_args.train_ctx_len 96 \
                 # validation on {96, 192, 336, 720}
                 --data.data_manager.init_args.val_pred_len_list 96-192-336-720 \
                 # testing on {24, 96, 192, 336, 720, 1024}

@@ -258,26 +258,19 @@ Conventional forecasting models typically require specific training and deployme
 
 ProbTS has been updated to support varied-horizon forecasting by enabling the specification of distinct context and prediction lengths for the training, validation, and testing phases.
 
-**Example:**
-```bash 
-python run.py --config config/multi_hor/elastst.yaml \
-                --data.data_manager.init_args.path ./datasets \
-                --trainer.default_root_dir /path/to/log_dir/ \
-                --data.data_manager.init_args.dataset {DATASET_NAME} \
-                --data.data_manager.init_args.context_length ${CTX_LEN} \
-                --data.data_manager.init_args.prediction_length ${TEST_PRED_LEN} \
-                --data.data_manager.init_args.train_pred_len_list ${TRAIN_PRED_LEN} \
-                --data.data_manager.init_args.train_ctx_len_list ${TRAIN_CTX_LEN} \
-                --data.data_manager.init_args.val_pred_len_list ${VAL_PRED_LEN} \
+**Quick Start**
 
+To quickly train and evaluate ElasTST:
+
+```bash 
+bash scripts/run_elastst.sh
 ```
 
-- `DATASET_NAME`: Select from datasets used in long-term forecasting scenerios.
-- `CTX_LEN`: Context length in the validation and testing phase.
-- `TRAIN_CTX_LEN`: Context length in the training phase.
-- `TEST_PRED_LEN`: Forecasting horizons in the testing phase.
-- `VAL_PRED_LEN`: Forecasting horizons for performance validation.
-- `TRAIN_PRED_LEN`: Forecasting horizons in the training phase.
+To quickly set up varied-horizon training:
+
+```bash 
+bash scripts/run_varied_hor_training.sh
+```
 
 For detailed information on the configuration, refer to the [documentation](./docs/documentation/README.md#forecasting-with-varied-prediction-lengths).
 

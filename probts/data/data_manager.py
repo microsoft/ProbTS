@@ -35,10 +35,10 @@ class DataManager:
         history_length: int = None,
         context_length: Union[list,int,str] = None,
         prediction_length: Union[list,int,str] = None,
-        train_ctx_len_list: Union[list,int,str] = None,
+        train_ctx_len: Union[list,int,str] = None,
         train_pred_len_list: Union[list,int,str] = None,
+        val_ctx_len: Union[list,int,str] = None,
         val_pred_len_list: Union[list,int,str] = None,
-        val_ctx_len_list: Union[list,int,str] = None,
         test_rolling_length: int = 96,
         split_val: bool = True,
         scaler: str = 'none',
@@ -49,7 +49,7 @@ class DataManager:
         data_path: str = None,
         freq: str = None,
         multivariate: bool = True,
-        continous_sample: bool = False,
+        continuous_sample: bool = False,
     ):
         self.dataset = dataset
         self.global_mean = None
@@ -58,10 +58,11 @@ class DataManager:
         self.test_sampling = test_sampling
         self.timeenc = timeenc
         self.var_specific_norm = var_specific_norm
-        self.continous_sample = continous_sample
+        self.continuous_sample = continuous_sample
         self.test_rolling_length = test_rolling_length
         self.test_rolling_dict = {'h': 24, 'd': 7, 'b':5, 'w':4, 'min': 60}
 
+        # Global Normalization
         if scaler == 'standard':
             self.scaler = StandardScaler(var_specific=self.var_specific_norm)
         elif scaler == 'temporal':
@@ -70,19 +71,26 @@ class DataManager:
             self.scaler = IdentityScaler()
 
         # covert str to list to support multi-horizon training & inference
-        self.test_pred_len_list = ensure_list(prediction_length, default_value=prediction_length)
-        self.pred_len_list = ensure_list(train_pred_len_list, default_value=prediction_length)
-        self.ctx_len_list = ensure_list(train_ctx_len_list, default_value=context_length)
+        self.train_pred_len_list = ensure_list(train_pred_len_list, default_value=prediction_length)
         self.val_pred_len_list = ensure_list(val_pred_len_list, default_value=prediction_length)
-        self.val_ctx_len_list = ensure_list(val_ctx_len_list, default_value=context_length)
+        self.test_pred_len_list = ensure_list(prediction_length)
+        
+        self.train_ctx_len_list = ensure_list(train_ctx_len, default_value=context_length)
+        self.val_ctx_len_list = ensure_list(val_ctx_len, default_value=context_length)
+        self.test_ctx_len_list = ensure_list(context_length)
+        
+        # We do not support multi-context so far, but context can be varied across train/validation/testing splits
+        assert (len(self.train_ctx_len_list) == 1) and (len(self.val_ctx_len_list) == 1) and (len(self.test_ctx_len_list) == 1), \
+            "We do not support multi-context so far, but context can be varied across train/validation/testing splits. Assign a single context length for each split."
         
         self.multi_hor = True
+        
         # if multiple horizons assigned, using MultiHorizonDataset
         if prediction_length is None:
             self.multi_hor = False
         else:
-            if len(self.pred_len_list) == 1 and len(self.val_pred_len_list) == 1 and len(self.test_pred_len_list) == 1:
-                if self.val_pred_len_list[0] == self.test_pred_len_list[0] and self.pred_len_list[0] == self.test_pred_len_list[0]:
+            if len(self.train_pred_len_list) == 1 and len(self.val_pred_len_list) == 1 and len(self.test_pred_len_list) == 1:
+                if self.val_pred_len_list[0] == self.test_pred_len_list[0] and self.train_pred_len_list[0] == self.test_pred_len_list[0]:
                     self.multi_hor = False
             
             
@@ -130,8 +138,8 @@ class DataManager:
             # Meta parameters
             self.lags_list = get_lags(self.freq)
             if self.multi_hor:
-                self.prediction_length = ensure_list(prediction_length, default_value=prediction_length)
-                self.context_length = ensure_list(context_length, default_value=context_length)
+                self.prediction_length = ensure_list(prediction_length)
+                self.context_length = ensure_list(context_length)
                 self.history_length = (max(self.context_length) + max(self.lags_list)) \
                     if history_length is None else history_length
             else:
@@ -148,10 +156,10 @@ class DataManager:
                     self.test_rolling_length = 24
             self.prepare_LTSF_dataset()
 
-        print(f"test context_length: {self.context_length}, test prediction_length: {self.prediction_length}")
-        print(f"validation context_length: {self.val_ctx_len_list}, validation prediction_length: {self.val_pred_len_list}")
-        print(f"training context lengths: {self.ctx_len_list}, training prediction lengths: {self.pred_len_list}")
-        print(f"test_rolling_length: {self.test_rolling_length}")
+        print(f"test context length: {self.test_ctx_len_list}, test prediction length: {self.test_pred_len_list}")
+        print(f"validation context length: {self.val_ctx_len_list}, validation prediction length: {self.val_pred_len_list}")
+        print(f"training context lengths: {self.train_ctx_len_list}, training prediction lengths: {self.train_pred_len_list}")
+        print(f"test rolling length: {self.test_rolling_length}")
         if scaler == 'standard':
             print(f"variate-specific normalization: {self.var_specific_norm}")
 
@@ -173,23 +181,20 @@ class DataManager:
         group_val_set = test_grouper(val_set)
         group_test_set = test_grouper(test_set)
         
-        # group_val_set = get_rolling_test(group_val_set, self.prediction_length, self.border_begin[1], self.border_end[1], rolling_length=self.test_rolling_length, freq=self.freq)
-        # group_test_set = get_rolling_test(group_test_set, self.prediction_length, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length, freq=self.freq)
-        
         if self.multi_hor:
             self.val_iter_dataset = {}
             self.test_iter_dataset = {}
             dataset_loader = MultiHorizonDataset(
-                ProbTSBatchData.input_names_, 
-                self.context_length,
-                self.prediction_length,
-                self.freq,
-                self.ctx_len_list,
-                self.pred_len_list,
-                self.val_ctx_len_list,
-                self.val_pred_len_list,
-                self.multivariate,
-                self.continous_sample
+                input_names = ProbTSBatchData.input_names_,
+                freq = self.freq,
+                train_ctx_range = self.train_ctx_len_list,
+                train_pred_range = self.train_pred_len_list,
+                val_ctx_range = self.val_ctx_len_list,
+                val_pred_range = self.val_pred_len_list,
+                test_ctx_range = self.test_ctx_len_list,
+                test_pred_range = self.test_pred_len_list,
+                multivariate = self.multivariate,
+                continuous_sample = self.continuous_sample
             )
             # validation set
             for pred_len in self.val_pred_len_list:
@@ -197,7 +202,7 @@ class DataManager:
                 self.val_iter_dataset[str(pred_len)] = dataset_loader.get_iter_dataset(local_group_val_set, mode='val', data_stamp=self.data_stamp[: self.border_end[1]], pred_len=[pred_len])
                 
             # testing set
-            for pred_len in self.prediction_length:
+            for pred_len in self.test_pred_len_list:
                 local_group_test_set = get_rolling_test('test', group_test_set, self.border_begin[2], self.border_end[2], rolling_length=self.test_rolling_length, pred_len=pred_len, freq=self.freq)
                 self.test_iter_dataset[str(pred_len)] = dataset_loader.get_iter_dataset(local_group_test_set, mode='test', data_stamp=self.data_stamp[: self.border_end[2]], pred_len=[pred_len])
         

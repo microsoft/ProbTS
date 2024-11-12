@@ -42,8 +42,9 @@ data:
       scaler: standard # identity, standard, temporal
       context_length: 96
       prediction_length: 24-96-192-336-720-1024
-      train_ctx_len_list: 96
+      train_ctx_len: 96
       train_pred_len_list: 720
+      val_ctx_len: 96
       val_pred_len_list: 720
   batch_size: 32
   test_batch_size: 32

@@ -1,5 +1,4 @@
 import os
-import json
 import torch
 import logging
 from probts.data import ProbTSDataModule
@@ -26,14 +25,14 @@ class ProbTSCli(LightningCLI):
     def add_arguments_to_parser(self, parser):
         data_to_model_link_args = [
             "scaler",
-            "pred_len_list", 
+            "train_pred_len_list", 
         ]
         data_to_forecaster_link_args = [
             "target_dim",
             "history_length",
             "context_length",
             "prediction_length",
-            "pred_len_list", 
+            "train_pred_len_list", 
             "lags_list",
             "freq",
             "time_feat_dim",
@@ -55,9 +54,9 @@ class ProbTSCli(LightningCLI):
                 self.datamodule.data_manager.dataset,
                 self.model.forecaster.name,
                 str(config_args.seed_everything),
-                'TrainCTX','-'.join([str(i) for i in self.datamodule.data_manager.ctx_len_list]),
-                'TrainPRED','-'.join([str(i) for i in self.datamodule.data_manager.pred_len_list]),
-                'ValCTX','-'.join([str(i) for i in self.datamodule.data_manager.context_length]),
+                'TrainCTX','-'.join([str(i) for i in self.datamodule.data_manager.train_ctx_len_list]),
+                'TrainPRED','-'.join([str(i) for i in self.datamodule.data_manager.train_pred_len_list]),
+                'ValCTX','-'.join([str(i) for i in self.datamodule.data_manager.val_ctx_len_list]),
                 'ValPRED','-'.join([str(i) for i in self.datamodule.data_manager.val_pred_len_list]),
             ])
         else:
@@ -94,7 +93,7 @@ class ProbTSCli(LightningCLI):
                 target_dim=self.datamodule.data_manager.target_dim,
                 freq=self.datamodule.data_manager.freq,
                 prediction_length=self.datamodule.data_manager.prediction_length,
-                pred_len_list=self.datamodule.data_manager.pred_len_list,
+                train_pred_len_list=self.datamodule.data_manager.train_pred_len_list,
                 lags_list=self.datamodule.data_manager.lags_list,
                 time_feat_dim=self.datamodule.data_manager.time_feat_dim,
                 no_training=self.model.forecaster.no_training,
