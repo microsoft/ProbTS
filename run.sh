@@ -1,7 +1,14 @@
-# export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=0
+MODEL=patchtst
+DATASET=etth1
+CTX_LEN=96
+PRED_LEN=96
 
-DATA_DIR=/path/to/datasets
-LOG_DIR=/path/to/log_dir
+# DATA_DIR=/path/to/datasets
+# LOG_DIR=/path/to/log_dir
+
+DATA_DIR=./datasets
+LOG_DIR=../../log_dir
 
 # multivariate datasets:
 # ['exchange_rate_nips', 'solar_nips','electricity_nips', 'traffic_nips','wiki2000_nips']
@@ -20,14 +27,6 @@ LOG_DIR=/path/to/log_dir
 # replace ${DATASET} with dataset name
 
 # if not specify dataset_path, the default path is ./datasets
-
-# for fixed horizon forecasting
-
-MODEL=patchtst
-DATASET=etth1
-CTX_LEN=96
-PRED_LEN=96
-
 
 python run.py --config config/ltsf/${DATASET}/${MODEL}.yaml --seed_everything 0  \
     --data.data_manager.init_args.path ${DATA_DIR} \

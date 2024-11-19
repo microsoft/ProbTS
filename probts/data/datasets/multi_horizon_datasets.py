@@ -32,7 +32,7 @@ from gluonts.dataset.common import DataEntry
 from gluonts.transform._base import FlatMapTransformation
 
 from probts.data.data_utils.time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
-from probts.data.datasets.stsf_datasets import TransformedIterableDataset
+from probts.data.datasets.single_horizon_datasets import TransformedIterableDataset
 from typing import Union
 from typing import Iterator, List, Optional, Tuple, Union
 import numpy as np
@@ -40,9 +40,32 @@ import random
 
 
 class MultiHorizonDataset():
-    '''
-    This class is used to support multiple horizons.
-    '''
+    """
+    MultiHorizonDataset: Supports multi-horizon forecasting by enabling flexible context and prediction lengths.
+
+    Parameters:
+    ----------
+    input_names : list
+        Names of input fields required by the model.
+    freq : str
+        Frequency of the data (e.g., 'H' for hourly, 'D' for daily).
+    train_ctx_range : Union[int, list]
+        Range of context lengths for the training dataset.
+    train_pred_range : Union[int, list]
+        Range of prediction lengths for the training dataset.
+    val_ctx_range : Union[int, list]
+        Range of context lengths for the validation dataset.
+    val_pred_range : Union[int, list]
+        Range of prediction lengths for the validation dataset.
+    test_ctx_range : Union[int, list]
+        Range of context lengths for the testing dataset.
+    test_pred_range : Union[int, list]
+        Range of prediction lengths for the testing dataset.
+    multivariate : bool, optional, default=True
+        Whether the dataset contains multiple target variables.
+    continuous_sample : bool, optional, default=False
+        Whether to enable continuous sampling horizons from the train_pred_range.
+    """
     def __init__(
         self,
         input_names: list,
@@ -73,6 +96,11 @@ class MultiHorizonDataset():
             self.expected_ndim = 1
 
     def get_sampler(self):
+        """
+        Creates samplers for training, validation, and testing datasets.
+        Samplers control how data instances are selected for each mode.
+        """
+        
         # for training
         train_min_past = min(self.train_ctx_range)
         train_min_future = min(self.train_pred_range)
@@ -110,6 +138,21 @@ class MultiHorizonDataset():
 
         
     def create_transformation(self, data_stamp=None, pred_len=None) -> Transformation:
+        """
+        Creates a transformation pipeline for data preprocessing.
+
+        Parameters:
+        ----------
+        data_stamp : np.array, optional
+            Precomputed time features. If None, features are generated based on the frequency.
+        pred_len : int, optional
+            Prediction length for the transformation. If None, uses the maximum training prediction range.
+
+        Returns:
+        ----------
+        Chain : Transformation
+            A chain of transformations applied to the dataset.
+        """
         if data_stamp is None:
             if self.freq in ["M", "W", "D", "B", "H", "min", "T"]:
                 time_features = fourier_time_features_from_frequency(self.freq)
@@ -162,6 +205,21 @@ class MultiHorizonDataset():
         )
 
     def create_instance_splitter(self, mode: str, pred_len=None):
+        """
+        Creates an instance splitter for slicing data sequences.
+
+        Parameters:
+        ----------
+        mode : str
+            Dataset mode. Must be one of ['train', 'val', 'test'].
+        pred_len : int, optional
+            Prediction length for validation or testing. If None, defaults to the predefined ranges.
+
+        Returns:
+        ----------
+        MultiHorizonSplitter : Transformation
+            Transformation that slices time series sequences.
+        """
         assert mode in ["train", "val", "test"]
 
         self.get_sampler()
@@ -213,6 +271,25 @@ class MultiHorizonDataset():
 
 
     def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None, pred_len=None) -> IterableDataset:
+        """
+        Creates an iterable dataset with applied transformations and splitters.
+
+        Parameters:
+        ----------
+        dataset : Dataset
+            Input dataset to transform.
+        mode : str
+            Mode of operation. Must be one of ['train', 'val', 'test'].
+        data_stamp : np.array, optional
+            Precomputed time features.
+        pred_len : int, optional
+            Prediction length for validation or testing.
+
+        Returns:
+        ----------
+        IterableDataset : TransformedIterableDataset
+            Transformed dataset ready for model training or evaluation.
+        """
         assert mode in ["train", "val", "test"]
 
         transform = self.create_transformation(data_stamp, pred_len=pred_len)

@@ -53,19 +53,19 @@ class ProbTSCli(LightningCLI):
             self.tag = "_".join([
                 self.datamodule.data_manager.dataset,
                 self.model.forecaster.name,
-                str(config_args.seed_everything),
                 'TrainCTX','-'.join([str(i) for i in self.datamodule.data_manager.train_ctx_len_list]),
                 'TrainPRED','-'.join([str(i) for i in self.datamodule.data_manager.train_pred_len_list]),
                 'ValCTX','-'.join([str(i) for i in self.datamodule.data_manager.val_ctx_len_list]),
                 'ValPRED','-'.join([str(i) for i in self.datamodule.data_manager.val_pred_len_list]),
+                'seed' + str(config_args.seed_everything)
             ])
         else:
             self.tag = "_".join([
                 self.datamodule.data_manager.dataset,
-                str(self.datamodule.data_manager.context_length),
-                str(self.datamodule.data_manager.prediction_length),
                 self.model.forecaster.name,
-                str(config_args.seed_everything)
+                'CTX' + str(self.datamodule.data_manager.context_length),
+                'PRED' + str(self.datamodule.data_manager.prediction_length),
+                'seed' + str(config_args.seed_everything)
             ])
         
         log.info(f"Root dir is {self.trainer.default_root_dir}, exp tag is {self.tag}")

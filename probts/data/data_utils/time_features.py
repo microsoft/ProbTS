@@ -146,7 +146,6 @@ def time_features(dates, freq='h'):
     return np.vstack([feat(dates) for feat in time_features_from_frequency_str(freq)])
 
 
-
 class FourierDateFeatures(TimeFeature):
     def __init__(self, freq: str) -> None:
         super().__init__()
@@ -210,6 +209,28 @@ def fourier_time_features_from_frequency(freq_str: str) -> List[TimeFeature]:
 
 
 def get_lags(freq_str:str):
+    """
+    Calculate appropriate lag values for time series forecasting based on data frequency.
+
+    Parameters
+    ----------
+    freq_str : str
+        The frequency of the time series data. Supported values include:
+
+    Returns
+    -------
+    lags : list[int]
+        A list of lag values, representing the offsets of past observations to include in the model.
+        The lags are tailored to capture autocorrelation and seasonality patterns for the specified frequency.
+
+    Examples
+    --------
+    >>> get_lags("H")
+    [1, 24, 168]  # Captures hourly, daily, and weekly seasonality
+
+    >>> get_lags("D")
+    [1, 7, 14]  # Captures daily, weekly, and bi-weekly seasonality
+    """
     freq_str = freq_str.upper()
     if freq_str == "M":
         lags = [1, 12]
