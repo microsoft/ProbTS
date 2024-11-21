@@ -17,7 +17,6 @@ from gluonts.transform import (
     Chain,
     InstanceSplitter,
     ValidationSplitSampler,
-    TestSplitSampler,
     ExpectedNumInstanceSampler,
     RenameFields,
     AsNumpyArray,
@@ -29,11 +28,26 @@ from gluonts.transform import (
     TargetDimIndicator,
     TransformedDataset,
 )
-from .time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
+from probts.data.data_utils.time_features import fourier_time_features_from_frequency, AddCustomizedTimeFeatures
 
 
-class GluonTSDataset():
+class SingleHorizonDataset():
+    """
+    SingleHorizonDataset: Handles dataset transformation and instance splitting for single-horizon forecasting tasks.
 
+    Parameters:
+    ----------
+    input_names : list
+        List of input field names required by the model.
+    history_length : int
+        Length of the historical time series window for input data.
+    prediction_length : int
+        Length of the forecasting horizon.
+    freq : str
+        Data frequency (e.g., 'H' for hourly, 'D' for daily).
+    multivariate : bool, optional, default=True
+        Indicates if the dataset contains multiple target variables.
+    """
     def __init__(
         self,
         input_names: list,
@@ -53,6 +67,12 @@ class GluonTSDataset():
             self.expected_ndim = 1
 
     def get_sampler(self):
+        """
+        Creates samplers for training, validation, and testing.
+        - Training: Generates instances randomly.
+        - Validation and Testing: Always selects the last time point.
+        """
+        # returns a set of indices at which training instances will be generated
         self.train_sampler = ExpectedNumInstanceSampler(
             num_instances=1.0,
             min_past=self.history_length,
@@ -71,7 +91,20 @@ class GluonTSDataset():
 
 
     def create_transformation(self, data_stamp=None) -> Transformation:
-        
+        """
+        Creates a data transformation pipeline to prepare inputs for the model.
+        Adds features such as time attributes and observed value indicators.
+
+        Parameters:
+        ----------
+        data_stamp : np.array, optional
+            Precomputed time features. If None, features are generated based on the data frequency.
+
+        Returns:
+        ----------
+        Chain : Transformation
+            A chain of transformations applied to the dataset.
+        """
         if data_stamp is None:
             if self.freq in ["M", "W", "D", "B", "H", "min", "T"]:
                 time_features = fourier_time_features_from_frequency(self.freq)
@@ -89,10 +122,6 @@ class GluonTSDataset():
                 AsNumpyArray(
                     field=FieldName.TARGET,
                     expected_ndim=self.expected_ndim,
-                ),
-                ExpandDimArray(
-                    field=FieldName.TARGET,
-                    axis=None,
                 ),
                 AddObservedValuesIndicator(
                     target_field=FieldName.TARGET,
@@ -119,6 +148,19 @@ class GluonTSDataset():
         )
 
     def create_instance_splitter(self, mode: str):
+        """
+        Creates an instance splitter for training, validation, or testing.
+
+        Parameters:
+        ----------
+        mode : str
+            Mode of operation. Must be one of ['train', 'val', 'test'].
+
+        Returns:
+        ----------
+        InstanceSplitter : Transformation
+            A splitter transformation that slices input data for model training or evaluation.
+        """
         assert mode in ["train", "val", "test"]
 
         self.get_sampler()
@@ -128,6 +170,7 @@ class GluonTSDataset():
             "test": self.test_sampler,
         }[mode]
 
+        
         return InstanceSplitter(
             target_field=FieldName.TARGET,
             is_pad_field=FieldName.IS_PAD,
@@ -150,6 +193,23 @@ class GluonTSDataset():
         )
 
     def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None) -> IterableDataset:
+        """
+        Creates an iterable dataset for training, validation, or testing.
+
+        Parameters:
+        ----------
+        dataset : Dataset
+            Input dataset to transform.
+        mode : str
+            Mode of operation. Must be one of ['train', 'val', 'test'].
+        data_stamp : np.array, optional
+            Precomputed time features.
+
+        Returns:
+        ----------
+        IterableDataset : TransformedIterableDataset
+            Transformed dataset with applied transformations and instance splitting.
+        """
         assert mode in ["train", "val", "test"]
 
         transform = self.create_transformation(data_stamp)
@@ -175,6 +235,18 @@ class GluonTSDataset():
 
 
 class TransformedIterableDataset(IterableDataset):
+    """
+    A transformed iterable dataset that applies a transformation pipeline on-the-fly.
+
+    Parameters:
+    ----------
+    dataset : Dataset
+        The original dataset to transform.
+    transform : Transformation
+        The transformation pipeline to apply.
+    is_train : bool, optional, default=True
+        Whether the dataset is used for training.
+    """
     def __init__(
         self,
         dataset: Dataset,

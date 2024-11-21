@@ -2,8 +2,16 @@
 
 # ProbTS: Benchmarking Point and Distributional Forecasting across Diverse Prediction Horizons
 
-----------
-[ [Paper](https://arxiv.org/abs/2310.07446) | [Benchmarking](./docs/benchmark/README.md) | [Documentation](./docs/documentation/README.md) ]
+[![arxiv](https://img.shields.io/badge/arXiv-2310.07446-red?link=https%3A%2F%2Farxiv.org%2Fabs%2F2310.07446)](https://arxiv.org/abs/2310.07446) [![benchmarking](https://img.shields.io/badge/Benchmarking-ExpResults-blue?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Ftree%2Fadd_elastst%2Fdocs%2Fbenchmark)](./docs/benchmark/README.md) [![documentation](https://img.shields.io/badge/Toolkit-Documentation-green?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Fblob%2Fadd_elastst%2Fdocs%2Fdocumentation%2FREADME.md)](./docs/documentation/README.md)
+
+
+## News :tada:
+
+:triangular_flag_on_post: **Oct 2024**: ProbTS now includes the ElasTST model! Check out the [ElasTST branch](https://github.com/microsoft/ProbTS/tree/elastst) to reproduce all results reported in paper or run `bash scripts/run_elastst.sh` for a quick start.
+
+:triangular_flag_on_post: **Oct 2024**: The [camera-ready version](https://arxiv.org/abs/2310.07446) of ProbTS is now available, with more in-depth analyses on the impact of normalization.
+
+## About ProbTS :bulb:
 
 A wide range of industrial applications desire precise point and distributional forecasting for diverse prediction horizons. ProbTS serves as a benchmarking tool to aid in understanding how advanced time-series models fulfill these essential forecasting needs. It also sheds light on their advantages and disadvantages in addressing different challenges and unveil the possibilities for future research.
 
@@ -17,6 +25,8 @@ Specifically, ProbTS emphasizes the differences in their primary methodological 
 - Using autoregressive or non-autoregressive decoding schemes for multi-step outputs
 
 <div align=center> <img src="docs/figs/probts_framework.png" width = 95%/> </div>
+
+
 
 ## Available Models 🧩
 
@@ -33,9 +43,11 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 | [N-HiTS](https://arxiv.org/abs/2201.12886) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NHiTS` |
 | [NLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NLinear` |
 | [DLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.DLinear` |
+| [TSMixer](https://arxiv.org/abs/2303.06053) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.TSMixer` |
 | [TimesNet](https://arxiv.org/abs/2210.02186) | Short- / Long-term | Point | Non-auto | `probts.model.forecaster.point_forecaster.TimesNet` |
 | [PatchTST](https://arxiv.org/abs/2211.14730) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.PatchTST` |
 | [iTransformer](https://arxiv.org/abs/2310.06625) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.iTransformer` |
+| [ElasTST](https://arxiv.org/abs/2411.01842) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.ElasTST` |
 | [GRU NVP](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_NVP` |
 | [GRU MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_MAF` |
 | [Trans MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.Trans_MAF` |
@@ -136,7 +148,7 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
     # Long-term Forecasting
     ['etth1', 'etth2','ettm1','ettm2','traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf', 'caiso', 'nordpool']
     ```
-    Note: When utilizing long-term forecasting datasets, you must explicitly specify the `context_length` and `prediction_length` parameters. For example, to set a context length of 96 and a prediction length of 192, use the following command-line arguments:
+    *Note: When utilizing long-term forecasting datasets, you must explicitly specify the `context_length` and `prediction_length` parameters. For example, to set a context length of 96 and a prediction length of 192, use the following command-line arguments:*
     ```bash
     --data.data_manager.init_args.context_length 96 \
     --data.data_manager.init_args.prediction_length 192 \
@@ -166,9 +178,9 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
         --data.data_manager.init_args.multivariate true
         ```
 
-    Note 1: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.
+    *Note 1: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.*
 
-    Note 2: You can adjust the test instance sampling using the `--data.data_manager.init_args.test_rolling_length` parameter. The default value is `96`.
+    *Note 2: You can adjust the test instance sampling using the `--data.data_manager.init_args.test_rolling_length` parameter.*
 
 ### Checkpoints for Foundation Models
 
@@ -241,6 +253,32 @@ python run.py --config config/path/to/model.yaml \
 ['etth1', 'etth2','ettm1','ettm2','traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf', 'caiso', 'nordpool']
 ```
 
+### Forecasting with Varied Prediction Lengths
+
+
+Conventional forecasting models typically require specific training and deployment for each prediction horizon. However, with the growing importance of varied-horizon forecasting, there is a need for models that can deliver robust predictions across multiple inference horizons after a single training phase.
+
+ProbTS has been updated to support varied-horizon forecasting by enabling the specification of distinct context and prediction lengths for the training, validation, and testing phases.
+
+**Quick Start**
+
+To quickly train and evaluate ElasTST:
+
+```bash 
+bash scripts/run_elastst.sh
+```
+
+To quickly set up varied-horizon training:
+
+```bash 
+bash scripts/run_varied_hor_training.sh
+```
+
+For detailed information on the configuration, refer to the [documentation](./docs/documentation/README.md#forecasting-with-varied-prediction-lengths).
+
+*Note: Currently, this feature is only supported by ElasTST, Autoformer, and foundation models.*
+
+
 ## Benchmarking :balance_scale:
 
 By utilizing ProbTS, we conduct a systematic comparison between studies that focus on point forecasting and those aimed at distributional estimation, employing various forecasting horizons and evaluation metrics. For more details
@@ -252,26 +290,6 @@ By utilizing ProbTS, we conduct a systematic comparison between studies that foc
 ## Documentation :open_book:
 
 For detailed information on configuration parameters and model customization, please refer to the [documentation](./docs/documentation/README.md).
-
-
-### Key Configuration Parameters 
-
-- Adjust model and data parameters in `run.sh`. Key parameters include:
-
-| Config Name | Type | Description |
-| --- | --- | --- |
-| `trainer.max_epochs` | integer | Maximum number of training epochs. |
-| `model.forecaster.class_path` | string | Forecaster module path (e.g., `probts.model.forecaster.point_forecaster.PatchTST`). |
-| `model.forecaster.init_args.{ARG}` | - | Model-specific hyperparameters. |
-| `model.num_samples` | integer | Number of samples per distribution during evaluation. |
-| `model.learning_rate` | float | Learning rate. |
-| `data.data_manager.init_args.dataset` | string | Dataset for training and evaluation. |
-| `data.data_manager.init_args.path` | string | Path to the dataset folder. |
-| `data.data_manager.init_args.scaler` | string | Scaler type: `identity`, `standard` (z-score normalization), or `temporal` (scale based on average temporal absolute value). |
-| `data.data_manager.init_args.context_length` | integer | Length of observation window (required for long-term forecasting). |
-| `data.data_manager.init_args.prediction_length` | integer | Forecasting horizon length (required for long-term forecasting). |
-| `data.data_manager.init_args.var_specific_norm` | boolean | If conduct per-variate normalization or not. |
-| `data.batch_size` | integer | Batch size. |
 
 
 - To print the full pipeline configuration to a file:
@@ -318,14 +336,14 @@ Special thanks to the following repositories for their open-sourced code bases a
 - [ForecastPFN](https://github.com/abacusai/ForecastPFN)
 - [TTM](https://github.com/ibm-granite/granite-tsfm)
 
-## Citing ProbTS 🌟
+## Citing ProbTS :beers:
 
 If you have used ProbTS for research or production, please cite it as follows.
 ```tex
-@article{zhang2023probts,
+@inproceedings{zhang2024probts,
   title={{ProbTS}: Benchmarking Point and Distributional Forecasting across Diverse Prediction Horizons},
   author={Zhang, Jiawen and Wen, Xumeng and Zhang, Zhenwei and Zheng, Shun and Li, Jia and Bian, Jiang},
-  journal={arXiv preprint arXiv:2310.07446},
-  year={2023}
+  booktitle={NeurIPS Datasets and Benchmarks Track},
+  year={2024}
 }
 ```

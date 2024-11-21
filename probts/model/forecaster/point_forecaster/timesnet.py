@@ -13,8 +13,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.fft
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers.Embed import DataEmbedding
-from probts.model.nn.layers.Conv_Blocks import Inception_Block_V1
+from probts.model.nn.arch.TransformerModule.Embed import DataEmbedding
+from probts.model.nn.arch.Conv_Blocks import Inception_Block_V1
 
 
 def FFT_for_Period(x, k=2):

@@ -14,8 +14,8 @@ from torch import Tensor
 from typing import Optional
 
 from probts.model.forecaster import Forecaster
-from probts.model.nn.layers.PatchTST_backbone import PatchTST_backbone
-from probts.model.nn.layers.PatchTST_layers import series_decomp
+from probts.model.nn.arch.PatchTSTModule.PatchTST_backbone import PatchTST_backbone
+from probts.model.nn.arch.PatchTSTModule.PatchTST_layers import series_decomp
 
 class PatchTST(Forecaster):
     def __init__(

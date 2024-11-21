@@ -11,7 +11,7 @@
 from typing import Union
 from probts.model.forecaster import Forecaster
 from einops import rearrange, repeat 
-from probts.model.nn.layers.Moirai_backbone import MoiraiBackbone
+from probts.model.nn.arch.Moirai_backbone import MoiraiBackbone
 from uni2ts.model.moirai.module import MoiraiModule
 
 
@@ -27,6 +27,12 @@ class Moirai(Forecaster):
         super().__init__(**kwargs)
         self.variate_mode = variate_mode
         self.patch_size = patch_size if patch_size == 'auto' else int(patch_size)
+        
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
         
         # Load pretrained model
         self.no_training = True

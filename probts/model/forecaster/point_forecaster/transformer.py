@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from probts.data import ProbTSBatchData
-from probts.utils import repeat
 from probts.model.forecaster import Forecaster
 
 

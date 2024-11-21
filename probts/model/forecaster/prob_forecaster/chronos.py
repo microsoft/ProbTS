@@ -23,8 +23,16 @@ class Chronos(Forecaster):
     ):
         super().__init__(**kwargs)
         
-        self.pred_len = kwargs.get('prediction_length')
-        print(self.context_length, self.pred_len)
+        # self.pred_len = kwargs.get('prediction_length')
+        
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+            
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+            
+        self.pred_len = self.prediction_length
 
         # Load pretrained model
         self.no_training = True

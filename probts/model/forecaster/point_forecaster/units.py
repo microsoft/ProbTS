@@ -1006,6 +1006,12 @@ class UniTS(Forecaster):
     ):
         super().__init__(**kwargs)
         self.no_training = True
+        
+        if (type(self.context_length).__name__=='list'):
+            context_length = max(context_length)
+            
+        if (type(self.prediction_length).__name__=='list'):
+            prediction_length = max(prediction_length)
 
         args, configs_list = self.generate_units_default_args(self.dataset)
         self.model = Model(args, configs_list, pretrain=False)

@@ -13,9 +13,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
-from torch.distributions import Normal
-from probts.model.forecaster import Forecaster
-from .layers import DiffusionEmbedding
+from probts.model.nn.prob.diffusion_layers import DiffusionEmbedding
 from functools import partial
 from inspect import isfunction
 

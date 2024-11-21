@@ -26,8 +26,18 @@ class LagLlama(Forecaster):
     ):
         super().__init__(**kwargs)
         
-        self.ctx_len = kwargs.get('context_length')
-        self.pred_len = kwargs.get('prediction_length')
+        # self.ctx_len = kwargs.get('context_length')
+        # self.pred_len = kwargs.get('prediction_length')
+        
+        if type(self.prediction_length) == list:
+            self.prediction_length = max(self.prediction_length)
+            
+
+        if type(self.context_length) == list:
+            self.context_length = max(self.context_length)
+            
+        self.ctx_len = self.context_length
+        self.pred_len = self.prediction_length
 
         # Load pretrained model
         self.no_training = True

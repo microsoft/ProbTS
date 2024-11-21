@@ -18,7 +18,7 @@ class Evaluator:
     def coverage_name(self, q):
         return f"Coverage[{q}]"
 
-    def get_sequence_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1):
+    def get_sequence_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1,loss_weights=None):
         mean_forecasts = forecasts.mean(axis=samples_dim)
         median_forecasts = np.quantile(forecasts, 0.5, axis=samples_dim)
         metrics = {
@@ -37,6 +37,15 @@ class Evaluator:
         metrics["NRMSE"] = metrics["RMSE"] / metrics["abs_target_mean"]
         metrics["ND"] = metrics["abs_error"] / metrics["abs_target_sum"]
         
+        # calculate weighted loss
+        if loss_weights is not None:
+            nd = np.abs(targets - mean_forecasts) / np.sum(np.abs(targets), axis=(1, 2))
+            loss_weights = loss_weights.detach().unsqueeze(0).unsqueeze(-1).numpy()
+            weighted_ND = loss_weights * nd
+            metrics['weighted_ND'] = np.sum(weighted_ND)
+        else:
+            metrics['weighted_ND'] = metrics["ND"]
+
         for q in self.quantiles:
             q_forecasts = np.quantile(forecasts, q, axis=samples_dim)
             metrics[self.loss_name(q)] = quantile_loss(targets, q_forecasts, q)
@@ -58,7 +67,7 @@ class Evaluator:
         )
         return metrics
 
-    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1):
+    def get_metrics(self, targets, forecasts, seasonal_error=None, samples_dim=1, loss_weights=None):
         metrics = {}
         seq_metrics = {}
         
@@ -68,7 +77,8 @@ class Evaluator:
                 np.expand_dims(targets[i], axis=0),
                 np.expand_dims(forecasts[i], axis=0),
                 np.expand_dims(seasonal_error[i], axis=0) if seasonal_error is not None else None,
-                samples_dim
+                samples_dim,
+                loss_weights
             )
             for metric_name, metric_value in single_seq_metrics.items():
                 if metric_name not in seq_metrics:
@@ -81,9 +91,9 @@ class Evaluator:
 
     @property
     def selected_metrics(self):
-        return ["CRPS", "ND", "NRMSE", "MSE", "MASE"]
+        return [ "ND",'weighted_ND', 'CRPS', "NRMSE", "MSE", "MASE"]
 
-    def __call__(self, targets, forecasts, past_data, freq):
+    def __call__(self, targets, forecasts, past_data, freq, loss_weights=None):
         """
 
         Parameters
@@ -106,7 +116,7 @@ class Evaluator:
         
         seasonal_error = calculate_seasonal_error(past_data, freq)
 
-        metrics = self.get_metrics(targets, forecasts, seasonal_error=seasonal_error, samples_dim=1)
+        metrics = self.get_metrics(targets, forecasts, seasonal_error=seasonal_error, samples_dim=1, loss_weights=loss_weights)
         metrics_sum = self.get_metrics(targets.sum(axis=-1), forecasts.sum(axis=-1), samples_dim=1)
         
         # select output metrics

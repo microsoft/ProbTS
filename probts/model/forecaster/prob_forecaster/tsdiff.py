@@ -11,15 +11,12 @@
 # ---------------------------------------------------------------------------------
 
 import torch
-import torch.nn as nn
-from probts.model.nn.layers.s4_backbones import BackboneModel
-from einops import rearrange
-from probts.utils import repeat
 import torch.nn.functional as F
 from probts.utils import extract
 from probts.model.forecaster import Forecaster
+from probts.model.nn.arch.S4.s4_backbones import BackboneModel
+from probts.utils import repeat
 import sys
-import numpy as np
 
 def linear_beta_schedule(timesteps):
     beta_start = 0.0001

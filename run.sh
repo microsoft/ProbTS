@@ -4,11 +4,8 @@ DATASET=etth1
 CTX_LEN=96
 PRED_LEN=96
 
-# DATA_DIR=/path/to/datasets
-# LOG_DIR=/path/to/log_dir
-
-DATA_DIR=./datasets
-LOG_DIR=../../log_dir
+DATA_DIR=/path/to/datasets
+LOG_DIR=/path/to/log_dir
 
 # multivariate datasets:
 # ['exchange_rate_nips', 'solar_nips','electricity_nips', 'traffic_nips','wiki2000_nips']

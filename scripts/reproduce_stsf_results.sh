@@ -3,8 +3,6 @@ export CUDA_VISIBLE_DEVICES=0
 DATA_DIR=./datasets
 LOG_DIR=./exps
 
-CTX_LEN=96
-
 for DATASET in 'solar' 'electricity' 'exchange' 'traffic' 'wiki'
 do
     for MODEL in 'dlinear' 'patchtst' 'gru_nvp' 'gru_maf' 'trans_maf' 'timegrad' 'csdi' 'timesnet'
