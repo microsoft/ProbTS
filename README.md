@@ -2,8 +2,7 @@
 
 # ProbTS: Benchmarking Point and Distributional Forecasting across Diverse Prediction Horizons
 
-![Static Badge](https://img.shields.io/badge/arXiv-2310.07446-red?link=https%3A%2F%2Farxiv.org%2Fabs%2F2310.07446)  ![Static Badge](https://img.shields.io/badge/Benchmarking-ExpResults-blue?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Ftree%2Fadd_elastst%2Fdocs%2Fbenchmark)
-  ![Static Badge](https://img.shields.io/badge/Toolkit-Documentation-green?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Fblob%2Fadd_elastst%2Fdocs%2Fdocumentation%2FREADME.md)
+[![arxiv](https://img.shields.io/badge/arXiv-2310.07446-red?link=https%3A%2F%2Farxiv.org%2Fabs%2F2310.07446)](https://arxiv.org/abs/2310.07446) [![benchmarking](https://img.shields.io/badge/Benchmarking-ExpResults-blue?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Ftree%2Fadd_elastst%2Fdocs%2Fbenchmark)](./docs/benchmark/README.md) [![documentation](https://img.shields.io/badge/Toolkit-Documentation-green?style=flat&link=https%3A%2F%2Fgithub.com%2Fmicrosoft%2FProbTS%2Fblob%2Fadd_elastst%2Fdocs%2Fdocumentation%2FREADME.md)](./docs/documentation/README.md)
 
 
 ## News :tada:
