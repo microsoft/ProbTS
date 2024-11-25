@@ -171,8 +171,8 @@ class ProbTSCli(LightningCLI):
 if __name__ == "__main__":
     cli = ProbTSCli(
         datamodule_class=ProbTSDataModule,
-        # model_class=ProbTSForecastModule,
-        model_class=ProbTSPretrainModule,
+        model_class=ProbTSForecastModule,
+        # model_class=ProbTSPretrainModule,
         save_config_kwargs={"overwrite": True},
         run=False,
     )

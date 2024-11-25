@@ -43,7 +43,7 @@ class Moirai(Forecaster):
             )
         else:
             self.moirai = MoiraiBackbone(
-                module=MoiraiModule.from_pretrained(f"Salesforce/moirai-1.0-R-{model_size}"),
+                module=MoiraiModule.from_pretrained(f"Salesforce/moirai-1.1-R-{model_size}"),
                 prediction_length=self.prediction_length,
                 context_length=self.context_length,
                 patch_size=self.patch_size,
