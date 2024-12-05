@@ -12,7 +12,7 @@ import torch
 import numpy as np
 from typing import Optional, Dict
 import torch.nn as nn
-
+import importlib
 
 def repeat(tensor: torch.Tensor, n: int, dim: int = 0):
     return tensor.repeat_interleave(repeats=n, dim=dim)
@@ -95,7 +95,27 @@ def find_best_epoch(ckpt_folder):
     return best_epoch, ckpt_files[best_epoch]
 
 def ensure_list(input_value, default_value=None):
+    """
+    Ensures that the input is converted to a list. If the input is None,
+    it converts the default value to a list instead.
+    """
     result = convert_to_list(input_value)
     if result is None:
         result = convert_to_list(default_value)
     return result
+
+
+def init_class_helper(class_name):
+    """
+    Dynamically imports a module and retrieves a class.
+
+    Args:
+        class_name (str): The fully qualified name of the class in the format "module_name.ClassName".
+
+    Returns:
+        type: The class object retrieved from the specified module.
+    """
+    module_name, class_name = class_name.rsplit(".", 1)
+    module = importlib.import_module(module_name)
+    Class = getattr(module, class_name)
+    return Class

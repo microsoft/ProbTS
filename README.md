@@ -39,23 +39,23 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 | Linear | - | Point | Auto / Non-auto | `probts.model.forecaster.point_forecaster.LinearForecaster` |
 | [GRU](https://arxiv.org/abs/1412.3555) | - | Point | Auto / Non-auto | `probts.model.forecaster.point_forecaster.GRUForecaster` |
 | [Transformer](https://arxiv.org/abs/1706.03762) | - | Point | Auto / Non-auto | `probts.model.forecaster.point_forecaster.TransformerForecaster` |
-| [Autoformer](https://arxiv.org/abs/2106.13008) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.Autoformer` |
-| [N-HiTS](https://arxiv.org/abs/2201.12886) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NHiTS` |
-| [NLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.NLinear` |
-| [DLinear](https://arxiv.org/abs/2205.13504) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.DLinear` |
-| [TSMixer](https://arxiv.org/abs/2303.06053) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.TSMixer` |
-| [TimesNet](https://arxiv.org/abs/2210.02186) | Short- / Long-term | Point | Non-auto | `probts.model.forecaster.point_forecaster.TimesNet` |
-| [PatchTST](https://arxiv.org/abs/2211.14730) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.PatchTST` |
-| [iTransformer](https://arxiv.org/abs/2310.06625) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.iTransformer` |
-| [ElasTST](https://arxiv.org/abs/2411.01842) | Long-trem | Point | Non-auto | `probts.model.forecaster.point_forecaster.ElasTST` |
-| [GRU NVP](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_NVP` |
-| [GRU MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_MAF` |
-| [Trans MAF](https://arxiv.org/abs/2002.06103) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.Trans_MAF` |
-| [TimeGrad](https://arxiv.org/abs/2101.12072) | Short-term | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.TimeGrad` |
-| [CSDI](https://arxiv.org/abs/2107.03502) | Short-term | Probabilistic | Non-auto | `probts.model.forecaster.prob_forecaster.CSDI` |
-| [TSDiff](https://arxiv.org/abs/2307.11494) | Short-term | Probabilistic | Non-auto | `probts.model.forecaster.prob_forecaster.TSDiffCond` |
+| [Autoformer](https://arxiv.org/abs/2106.13008) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.Autoformer` |
+| [N-HiTS](https://arxiv.org/abs/2201.12886) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.NHiTS` |
+| [NLinear](https://arxiv.org/abs/2205.13504) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.NLinear` |
+| [DLinear](https://arxiv.org/abs/2205.13504) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.DLinear` |
+| [TSMixer](https://arxiv.org/abs/2303.06053) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.TSMixer` |
+| [TimesNet](https://arxiv.org/abs/2210.02186) | Short / Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.TimesNet` |
+| [PatchTST](https://arxiv.org/abs/2211.14730) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.PatchTST` |
+| [iTransformer](https://arxiv.org/abs/2310.06625) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.iTransformer` |
+| [ElasTST](https://arxiv.org/abs/2411.01842) | Long | Point | Non-auto | `probts.model.forecaster.point_forecaster.ElasTST` |
+| [GRU NVP](https://arxiv.org/abs/2002.06103) | Short | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_NVP` |
+| [GRU MAF](https://arxiv.org/abs/2002.06103) | Short | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.GRU_MAF` |
+| [Trans MAF](https://arxiv.org/abs/2002.06103) | Short | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.Trans_MAF` |
+| [TimeGrad](https://arxiv.org/abs/2101.12072) | Short | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.TimeGrad` |
+| [CSDI](https://arxiv.org/abs/2107.03502) | Short | Probabilistic | Non-auto | `probts.model.forecaster.prob_forecaster.CSDI` |
+| [TSDiff](https://arxiv.org/abs/2307.11494) | Short | Probabilistic | Non-auto | `probts.model.forecaster.prob_forecaster.TSDiffCond` |
 
-### Fundation Models
+### Foundation Models
 
 | **Model** | **Any Horizon** | **Estimation** | **Decoding Scheme** | **Class Path** |
 | --- | --- | --- | --- | --- |

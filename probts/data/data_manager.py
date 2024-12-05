@@ -50,6 +50,7 @@ class DataManager:
         continuous_sample: bool = False,
         train_ratio: float = 0.7,
         test_ratio: float = 0.2,
+        auto_search: bool = False,
     ):
         """
         DataManager class for handling datasets and preparing data for time-series models.
@@ -114,6 +115,8 @@ class DataManager:
             Proportion of the dataset used for training. Default is 70% of the data.
         test_ratio : float, optional, default=0.2
             Proportion of the dataset used for testing. Default is 20% of the data.
+        auto_search : bool, optional, default=False
+            Make past_len=ctx_len+pred_len, enabling post training search.
         """
 
         self.dataset = dataset
@@ -137,6 +140,7 @@ class DataManager:
         self.continuous_sample = continuous_sample
         self.train_ratio = train_ratio
         self.test_ratio = test_ratio
+        self.auto_search = auto_search
         
         self.test_rolling_dict = {'h': 24, 'd': 7, 'b':5, 'w':4, 'min': 60}
         self.global_mean = None
@@ -306,7 +310,7 @@ class DataManager:
                 rolling_length=self.test_rolling_length, pred_len=pred_len, freq=self.freq
             )
             self.test_iter_dataset[str(pred_len)] = dataset_loader.get_iter_dataset(
-                local_group_test_set, mode='test', data_stamp=self.data_stamp[:self.border_end[2]], pred_len=[pred_len]
+                local_group_test_set, mode='test', data_stamp=self.data_stamp[:self.border_end[2]], pred_len=[pred_len], auto_search=self.auto_search,
             )
             
         return dataset_loader

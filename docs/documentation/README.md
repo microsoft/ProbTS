@@ -13,6 +13,8 @@
   - [Model](#model-1)
     - [Available Models](#available-models)
     - [Using Customized Model](#using-customized-model)
+  - [Training](#training)
+    - [Configuring Optimizers and Learning Rate Schedulers](#configuring-optimizers-and-learning-rate-schedulers)
   - [Forecasting with Varied Prediction Lengths](#forecasting-with-varied-prediction-lengths)
     - [Example 1: Varied-Horizon Training](#example-1-varied-horizon-training)
     - [Example 2: Validation and Testing with Multiple Horizons](#example-2-validation-and-testing-with-multiple-horizons)
@@ -100,6 +102,10 @@ git reset --hard bb125c14a05e4231636d6b64f8951d5fe96da1dc
 | `model.learning_rate` | `float` | Learning rate. |
 | `model.quantiles_num` | `int` | Number of quantiles for evaluation. |
 | `model.sampling_weight_scheme` | `str`  | The scheme of training horizon reweighting. Options: ['random', 'none', 'const'].|
+| `model.optimizer_config.class_name` | `str` | optimizer module (e.g., `torch.optim.Adam`). |
+| `model.optimizer_config.init_args.{ARG}` | - | optimizer hyperparameters. |
+| `model.scheduler_config.class_name` | `str` | lr_scheduler module (e.g., `torch.optim.lr_scheduler.OneCycleLR`). |
+| `model.scheduler_config.init_args.{ARG}` | - | lr_scheduler hyperparameters. |
 
 ### Data
 
@@ -436,6 +442,43 @@ Run the customized model using the configuration file:
 ```bash
 python run.py --config config/path/to/model.yaml
 ```
+
+
+## Training
+
+
+### Configuring Optimizers and Learning Rate Schedulers
+
+ProbTS supports customizable optimizers and learning rate schedulers. You can specify them directly in the YAML configuration file.
+
+**Example Configuration**
+```yaml 
+model:
+  forecaster:
+    class_path: probts.model.forecaster.point_forecaster.PatchTST
+    init_args:
+      # Add forecaster-specific parameters here
+
+  optimizer_config:
+    class_name: torch.optim.Adam
+    init_args:
+      weight_decay: 0  # Add optimizer-specific parameters here
+
+  lr_scheduler_config:
+    class_name: torch.optim.lr_scheduler.OneCycleLR
+    init_args:
+      max_lr: 0.0001
+      steps_per_epoch: 100
+      pct_start: 0.3
+      epochs: 50  # Add scheduler-specific parameters here
+```
+
+Example configurations can be found in [config/default/patchtst.yaml](../../config/default/patchtst.yaml).
+
+**Notes**
+
+- If no configuration is provided, ProbTS defaults to the Adam optimizer with a constant learning rate.
+- Adjust init_args for both the optimizer and scheduler to suit your specific use case.
 
 
 ## Forecasting with Varied Prediction Lengths
