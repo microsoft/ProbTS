@@ -26,6 +26,7 @@ data:
       dataset: solar_nips
       split_val: true
       scaler: identity # identity, standard, temporal
+      auto_search: true
   batch_size: 64
   test_batch_size: 64
   num_workers: 8

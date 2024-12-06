@@ -38,6 +38,7 @@ dependencies = [
     "psutil",
     "reformer-pytorch",
     "gdown",
+    "kagglehub",
 ]
 
 [project.optional-dependencies]

@@ -245,7 +245,7 @@ class MultiHorizonDataset():
                 future_length = pred_len
                 
             if auto_search:
-                past_length = self.test_ctx_range + max(future_length)
+                past_length = [max(self.test_ctx_range) + max(future_length)]
             else:
                 past_length = self.test_ctx_range
             

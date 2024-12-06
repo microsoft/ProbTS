@@ -7,6 +7,9 @@
     - [Model](#model)
     - [Data](#data)
   - [Datasets](#datasets)
+    - [Datasets Overview](#datasets-overview)
+      - [Short-Term Setting](#short-term-setting)
+      - [Long-Term Setting](#long-term-setting)
     - [Data Processing Pipeline](#data-processing-pipeline)
     - [Using Build-in Datasets](#using-build-in-datasets)
     - [Using Customized Dataset](#using-customized-dataset)
@@ -160,6 +163,36 @@ For the datasets used for long-term forecasting scenario, we support three types
 
 ## Datasets
 
+### Datasets Overview
+
+
+#### Short-Term Setting
+
+| Dataset | DATASET_NAME | Domain | Frequency | #Var | time steps | Description |
+| --- | --- | --- | --- | --- | --- | --- |
+| Exchange | `exchange_rate_nips` | Finance | Busi. Day | 8 | 6,071  | Daily exchange rates of 8 countries |
+| Solar | `solar_nips` | Energy | H | 137 | 7,009 | Solar power production records |
+| Electricity | `electricity_nips` | Energy | H | 370 | 5,833  | Electricity consumption |
+| Traffic | `traffic_nips` | Transport | H | 963 | 4,001  | Road occupancy rates |
+| Wikipedia | `wiki2000_nips` | Web | D | 2,000 | 792 | Page views of 2000 Wikipedia pages |
+
+#### Long-Term Setting
+
+| Dataset | DATASET_NAME | Domain | Frequency | #Var | time steps | Description |
+| --- | --- | --- | --- | --- | --- | --- |
+| ETTh | `etth1` / `etth2` | Energy | H | 7 | 17,420 | Electricity transformer temperature per hour |
+| ETTm | `ettm1` / `ettm2` | Energy | 15min | 7 | 69,680  | Electricity transformer temperature every 15 min |
+| Electricity | `electricity_lstf` | Energy | H | 321  | 26,304  | Electricity consumption (Kwh) |
+| Weather | `weather_lstf` | Climate | 10min | 21 | 52,696  | Local climatological data |
+| Traffic  | `traffic_ltsf` | Transport | H  | 862 | 17,544  | Road occupancy rates |
+| Exchange | `exchange_ltsf` | Finance | Busi. Day | 8 | 7,588 | Daily exchange rates of 8 countries |
+| ILI  | `illness_ltsf` | Epidemiology | W | 7 | 966 | Ratio of patients seen with influenza-like illness |
+| Caiso | `caiso` | Energy | H | 10 | 74,472  | Electricity load series in different zones of California |
+| Nordpool | `nordpool` | Energy | H | 18 | 70,128  | Energy production volume in European countries |
+| Turkey Power | `turkey_power` | Energy | H | 18 | 26,304 | Electrical power demand in Turkey |
+| Istanbul Traffic | `istanbul_traffic` | Transport | H | 3 | 14,244 | Traffic Index data for Istanbul traffic |
+
+
 ### Data Processing Pipeline
 
 <div align=center> <img src="../figs/data_pipeline.png" width = 95%/> </div>
@@ -167,25 +200,15 @@ For the datasets used for long-term forecasting scenario, we support three types
 ### Using Build-in Datasets
 
 - **Short-Term Forecasting**: We use datasets from [GluonTS](https://github.com/awslabs/gluonts). 
-    Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}`. You can choose from multivariate or univariate datasets as per your requirement.
-    ```bash
-    # Multivariate Datasets
-    ['exchange_rate_nips', 'electricity_nips', 'traffic_nips', 'solar_nips', 'wiki2000_nips']
-
-    # Univariate Datasets
-    ['tourism_monthly', 'tourism_quarterly', 'tourism_yearly', 'm4_hourly', 'm4_daily', 'm4_weekly', 'm4_monthly', 'm4_quarterly', 'm4_yearly', 'm5']
-    ```
+    Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}` with available `DATASET_NAME` in [short-term setting](#short-term-setting).
 
 - **Long-Term Forecasting**: To download the [long-term forecasting datasets](https://drive.google.com/drive/folders/1ZOYpTUa82_jCcxIdTmyr0LXQfvaM9vIy), please follow these steps:
     ```bash
     bash scripts/prepare_datasets.sh "./datasets"
     ```
 
-    Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}` with the following list of available datasets:
-    ```bash
-    # Long-term Forecasting
-    ['etth1', 'etth2','ettm1','ettm2','traffic_ltsf', 'electricity_ltsf', 'exchange_ltsf', 'illness_ltsf', 'weather_ltsf', 'caiso', 'nordpool']
-    ```
+    Configure the datasets using `--data.data_manager.init_args.dataset {DATASET_NAME}` with available `DATASET_NAME` in [long-term setting](#long-term-setting).
+
     *Note: When utilizing long-term forecasting datasets, you must explicitly specify the `context_length` and `prediction_length` parameters. For example, to set a context length of 96 and a prediction length of 192, use the following command-line arguments:*
     ```bash
     --data.data_manager.init_args.context_length 96 \
@@ -198,7 +221,7 @@ For the datasets used for long-term forecasting scenario, we support three types
     - Navigate to the target dataset, such as the [Electricity Hourly Dataset](https://zenodo.org/records/4656140).
     - Download the `.tsf` file and place it in your local `datasets` directory (e.g., `./datasets`).
 
-    2. **Configure the Dataset**:
+    1. **Configure the Dataset**:
     - Use the following configuration to specify the dataset, file path, and frequency:
         ```bash
         --data.data_manager.init_args.dataset {DATASET_NAME} \

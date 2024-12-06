@@ -320,6 +320,7 @@ class DataManager:
         dataset_loader = SingleHorizonDataset(
             ProbTSBatchData.input_names_,
             self.history_length,
+            self.context_length,
             self.prediction_length,
             self.freq,
             self.multivariate,
@@ -337,7 +338,7 @@ class DataManager:
             'test', group_test_set, self.border_begin[2], self.border_end[2],
             rolling_length=self.test_rolling_length, pred_len=self.prediction_length, freq=self.freq
         )
-        self.test_iter_dataset = dataset_loader.get_iter_dataset(local_group_test_set, mode='test', data_stamp=self.data_stamp[:self.border_end[2]])
+        self.test_iter_dataset = dataset_loader.get_iter_dataset(local_group_test_set, mode='test', data_stamp=self.data_stamp[:self.border_end[2]], auto_search=self.auto_search)
 
         return dataset_loader
     
@@ -371,6 +372,7 @@ class DataManager:
         dataset_loader = SingleHorizonDataset(
             ProbTSBatchData.input_names_, 
             self.history_length,
+            self.context_length,
             self.prediction_length,
             self.freq,
             self.multivariate

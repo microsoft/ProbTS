@@ -52,6 +52,7 @@ class SingleHorizonDataset():
         self,
         input_names: list,
         history_length: int,
+        context_length: int,
         prediction_length: int,
         freq: str,
         multivariate: bool = True
@@ -59,6 +60,7 @@ class SingleHorizonDataset():
         super().__init__()
         self.input_names_ = input_names
         self.history_length = history_length
+        self.context_length = context_length
         self.prediction_length = prediction_length
         self.freq = freq
         if multivariate:
@@ -147,7 +149,7 @@ class SingleHorizonDataset():
             ]
         )
 
-    def create_instance_splitter(self, mode: str):
+    def create_instance_splitter(self, mode: str, auto_search=False):
         """
         Creates an instance splitter for training, validation, or testing.
 
@@ -170,6 +172,10 @@ class SingleHorizonDataset():
             "test": self.test_sampler,
         }[mode]
 
+        if auto_search:
+            past_length = self.context_length + self.prediction_length
+        else:
+            past_length=self.history_length
         
         return InstanceSplitter(
             target_field=FieldName.TARGET,
@@ -177,7 +183,7 @@ class SingleHorizonDataset():
             start_field=FieldName.START,
             forecast_start_field=FieldName.FORECAST_START,
             instance_sampler=instance_sampler,
-            past_length=self.history_length,
+            past_length=past_length,
             future_length=self.prediction_length,
             time_series_fields=[
                 FieldName.FEAT_TIME,
@@ -192,7 +198,7 @@ class SingleHorizonDataset():
             )
         )
 
-    def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None) -> IterableDataset:
+    def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None, auto_search=False) -> IterableDataset:
         """
         Creates an iterable dataset for training, validation, or testing.
 
@@ -217,7 +223,7 @@ class SingleHorizonDataset():
             with env._let(max_idle_transforms=100):
                 instance_splitter = self.create_instance_splitter(mode)
         else:
-            instance_splitter = self.create_instance_splitter(mode)
+            instance_splitter = self.create_instance_splitter(mode, auto_search=auto_search)
 
 
         input_names = self.input_names_
