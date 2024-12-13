@@ -34,7 +34,9 @@ def get_dataset_info(dataset, data_path=None, freq=None):
         'illness_ltsf': ('illness/national_illness.csv', 'W'),
         'weather_ltsf': ('weather/weather.csv', 'min'),
         'caiso': ('caiso/caiso_20130101_20210630.csv', 'H'),
-        'nordpool': ('nordpool/production.csv', 'H')
+        'nordpool': ('nordpool/production.csv', 'H'),
+        'turkey_power': ('kaggle/power Generation and consumption.csv', 'H'),
+        'istanbul_traffic': ('kaggle/istanbul_traffic.csv', 'H')
     }
     
     if dataset in paths:
@@ -91,6 +93,7 @@ def load_dataset(root_path, data_path,freq='h', timeenc=1, multivariate=True):
         target_dim: target dimensions
         data_size: total length of timestamps.
     """
+    data_format = None
     if '.tsf' in data_path:
         # Load Monash time series dataset
         df_raw, _, _, _, _ = convert_monash_data_to_dataframe(data_path)
@@ -102,7 +105,7 @@ def load_dataset(root_path, data_path,freq='h', timeenc=1, multivariate=True):
                 df_raw = df_raw.resample(freq).mean().reset_index()
     elif 'caiso' in data_path:
         # Load and process CAISO dataset
-        data = pd.read_csv(root_path + data_path)
+        data = pd.read_csv(os.path.join(root_path, data_path))
         data['Date'] = data['Date'].astype('datetime64[ns]')
         names = ['PGE','SCE','SDGE','VEA','CA ISO','PACE','PACW','NEVP','AZPS','PSEI']
         df_raw = pd.DataFrame(pd.date_range('20130101','20210630',freq='H')[:-1], columns=['Date'])
@@ -112,8 +115,19 @@ def load_dataset(root_path, data_path,freq='h', timeenc=1, multivariate=True):
         df_raw = df_raw.rename(columns={'Date': 'date'})
     elif 'nordpool' in data_path:
         # Load and process Nordpool dataset
-        df_raw = pd.read_csv(root_path + data_path, parse_dates=['Time'])
+        df_raw = pd.read_csv(os.path.join(root_path, data_path), parse_dates=['Time'])
         df_raw = df_raw.rename(columns={'Time': 'date'})
+    elif 'power Generation and consumption' in data_path:
+        # Load and process Turkey Power dataset
+        df_raw = pd.read_csv(os.path.join(root_path, data_path), parse_dates=['Date_Time'])
+        df_raw = df_raw.rename(columns={'Date_Time': 'date'})
+        data_format = "%d.%m.%Y %H:%M"
+    elif 'istanbul_traffic' in data_path:
+        # Load and process Istanbul Traffic dataset
+        df_raw = pd.read_csv(os.path.join(root_path, data_path), parse_dates=['datetime'])
+        df_raw = df_raw.rename(columns={'datetime': 'date'})
+        df_raw.set_index('date', inplace=True)
+        df_raw = df_raw.resample(freq).mean().reset_index()
     else:
         # Load customized dataset
         df_raw = pd.read_csv(os.path.join(root_path, data_path), parse_dates=['date'])
@@ -121,7 +135,7 @@ def load_dataset(root_path, data_path,freq='h', timeenc=1, multivariate=True):
     # Process time encoding
     if multivariate:
         df_stamp = df_raw[['date']]
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
+        df_stamp['date'] = pd.to_datetime(df_stamp.date, format=data_format)
         
         if timeenc == 0:
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)

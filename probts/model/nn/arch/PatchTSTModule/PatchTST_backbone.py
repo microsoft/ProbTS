@@ -278,7 +278,7 @@ class TSTEncoderLayer(nn.Module):
 
 
 class _MultiheadAttention(nn.Module):
-    def __init__(self, d_model, n_heads, d_k=None, d_v=None, res_attention=False, attn_dropout=0., proj_dropout=0., qkv_bias=True, lsa=False):
+    def __init__(self, d_model, n_heads, d_k=None, d_v=None, res_attention=False, attn_dropout=0., proj_dropout=0., qkv_bias=True):
         """Multi Head Attention Layer
         Input shape:
             Q:       [batch_size (bs) x max_q_len x d_model]
@@ -297,7 +297,7 @@ class _MultiheadAttention(nn.Module):
 
         # Scaled Dot-Product Attention (multiple heads)
         self.res_attention = res_attention
-        self.sdp_attn = _ScaledDotProductAttention(d_model, n_heads, attn_dropout=attn_dropout, res_attention=self.res_attention, lsa=lsa)
+        self.sdp_attn = _ScaledDotProductAttention(d_model, n_heads, attn_dropout=attn_dropout, res_attention=self.res_attention)
 
         # Poject output
         self.to_out = nn.Sequential(nn.Linear(n_heads * d_v, d_model), nn.Dropout(proj_dropout))
@@ -335,13 +335,12 @@ class _ScaledDotProductAttention(nn.Module):
     (Realformer: Transformer likes residual attention by He et al, 2020) and locality self sttention (Vision Transformer for Small-Size Datasets
     by Lee et al, 2021)"""
 
-    def __init__(self, d_model, n_heads, attn_dropout=0., res_attention=False, lsa=False):
+    def __init__(self, d_model, n_heads, attn_dropout=0., res_attention=False):
         super().__init__()
         self.attn_dropout = nn.Dropout(attn_dropout)
         self.res_attention = res_attention
         head_dim = d_model // n_heads
-        self.scale = nn.Parameter(torch.tensor(head_dim ** -0.5), requires_grad=lsa)
-        self.lsa = lsa
+        self.scale = torch.tensor(head_dim ** -0.5)
 
     def forward(self, q:Tensor, k:Tensor, v:Tensor, prev:Optional[Tensor]=None, key_padding_mask:Optional[Tensor]=None, attn_mask:Optional[Tensor]=None):
         '''

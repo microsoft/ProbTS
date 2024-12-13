@@ -56,9 +56,32 @@ def delete_path(path):
         elif os.path.isdir(path):
             shutil.rmtree(path)
                 
+                
+def download_datasets_from_kaggle(output_path):
+    import kagglehub
+    output_path = os.path.join(output_path, 'kaggle/')
+    
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        
+    path = kagglehub.dataset_download("dharanikra/electrical-power-demand-in-turkey")
+    s = os.path.join(path, 'power Generation and consumption.csv')
+    d = os.path.join(os.path.dirname(output_path), 'power Generation and consumption.csv')
+    shutil.move(s, d)
+    print("Path to electrical-power-demand-in-turkey files:", d)
+    delete_path(path)
+    
+    path = kagglehub.dataset_download("leonardo00/istanbul-traffic-index")
+    s = os.path.join(path, 'istanbul_traffic.csv')
+    d = os.path.join(os.path.dirname(output_path), 'istanbul_traffic.csv')
+    shutil.move(s, d)
+    print("Path to istanbul-traffic-index files:", d)
+    delete_path(path)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Download and extract zip file from Google Drive')
     parser.add_argument('--data_path', type=str, required=True, help='Path to store the extracted files')
     args = parser.parse_args()
 
     download_and_extract_zip(args.data_path, zip_name='all_datasets')
+    download_datasets_from_kaggle(args.data_path)

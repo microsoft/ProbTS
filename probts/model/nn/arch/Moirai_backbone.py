@@ -12,6 +12,7 @@ import math
 from contextlib import contextmanager
 from copy import deepcopy
 from typing import Any, Generator, Optional
+import sys
 
 import lightning as L
 import torch
@@ -126,6 +127,7 @@ class MoiraiBackbone(L.LightningModule):
         past_is_pad: Bool[torch.Tensor, "batch past_time"],
         num_samples: Optional[int] = None,
     ) -> Float[torch.Tensor, "batch sample future_time *tgt"]:
+        
         if self.hparams.patch_size == "auto":
             val_loss = []
             preds = []

@@ -28,6 +28,7 @@ data:
       scaler: standard # identity, standard, temporal
       var_specific_norm: true
       context_length: 5000
+      auto_search: true
   batch_size: 64
   test_batch_size: 64
   num_workers: 8

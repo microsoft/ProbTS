@@ -204,7 +204,7 @@ class MultiHorizonDataset():
             ]
         )
 
-    def create_instance_splitter(self, mode: str, pred_len=None):
+    def create_instance_splitter(self, mode: str, pred_len=None, auto_search=False):
         """
         Creates an instance splitter for slicing data sequences.
 
@@ -212,7 +212,7 @@ class MultiHorizonDataset():
         ----------
         mode : str
             Dataset mode. Must be one of ['train', 'val', 'test'].
-        pred_len : int, optional
+        pred_len : list, optional
             Prediction length for validation or testing. If None, defaults to the predefined ranges.
 
         Returns:
@@ -239,11 +239,15 @@ class MultiHorizonDataset():
             else:
                 future_length = pred_len
         else:
-            past_length = self.test_ctx_range
             if pred_len is None:
                 future_length = self.test_pred_range
             else:
                 future_length = pred_len
+                
+            if auto_search:
+                past_length = [max(self.test_ctx_range) + max(future_length)]
+            else:
+                past_length = self.test_ctx_range
             
             
         return MultiHorizonSplitter(
@@ -270,7 +274,7 @@ class MultiHorizonDataset():
         )
 
 
-    def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None, pred_len=None) -> IterableDataset:
+    def get_iter_dataset(self, dataset: Dataset, mode: str, data_stamp=None, pred_len=None, auto_search=False) -> IterableDataset:
         """
         Creates an iterable dataset with applied transformations and splitters.
 
@@ -282,7 +286,7 @@ class MultiHorizonDataset():
             Mode of operation. Must be one of ['train', 'val', 'test'].
         data_stamp : np.array, optional
             Precomputed time features.
-        pred_len : int, optional
+        pred_len : list, optional
             Prediction length for validation or testing.
 
         Returns:
@@ -299,7 +303,7 @@ class MultiHorizonDataset():
             with env._let(max_idle_transforms=100):
                 instance_splitter = self.create_instance_splitter(mode)
         else:
-            instance_splitter = self.create_instance_splitter(mode, pred_len=pred_len)
+            instance_splitter = self.create_instance_splitter(mode, pred_len=pred_len, auto_search=auto_search)
 
 
         input_names = self.input_names_

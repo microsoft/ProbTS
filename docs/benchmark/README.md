@@ -1,23 +1,18 @@
 # Benchmarking :balance_scale:
 
-We conducted a comprehensive benchmarking and analysis of a diverse range of state-of-the-art models from different strands of research. We mainly assessed these models using NAME and CRPS metrics across multiple forecasting horizons, repeating each experiment five times with different seeds to ensure result reliability.
+Accurate point and distributional forecasts across diverse horizons are crucial for time-series forecasting. However, existing research often focuses on isolated aspects, such as long-term point forecasting or short-term probabilistic estimation. This raises a fundamental question: **How do different methodological designs address these diverse forecasting needs?**
 
-Results of **time series foundation models** see [HERE](./FOUNDATION_MODEL.md).
-
-## Long-term Forecasting Benchmarking 
-
-Detailed configuration files can be found in folder [config/ltsf/](../../config/ltsf/).
-
-Table 1. Results ($\textrm{mean}_{\textrm{std}}$) on long-term forecasting scenarios with the best in $\textbf{bold}$ and the second $\underline{\textrm{underlined}}$, each containing five independent runs with different seeds. The input sequence length is set to 36 for the ILI-L dataset and 96 for the others. Due to the excessive time and memory consumption of CSDI in producing long-term forecasts, its results are unavailable in some datasets.
-
-![long-term forecasting experimental results](./figs/long_bench.jpg)
+In this repository, we:
+1. **Provide Detailed Reproduction Guides:** Offer comprehensive instructions for replicating supervised models and pre-trained foundation models.
+2. **Evaluate Methods Under a Unified Framework:** Align and assess existing methods across various data scenarios using a consistent benchmarking framework.
+3. **Deliver In-Depth Insights:** Present detailed analyses and insights into the experimental results.
 
 
+## Benchmarking Scripts
 
-## Short-term Forecasting Benchmarking 
+- [Supervised Forecasting Models](./supervised_model/README.md)
+- [Pre-trained Time-Series Foundation Models](./foundation_model/README.md)
 
-Detailed configuration files can be found in folder [config/stsf/](../../config/stsf/).
+## Methodology Overview
 
-Table 2.Results ($\textrm{mean}_{\textrm{std}}$) on short-term forecasting scenarios with the best in $\textbf{bold}$ and the second $\underline{\textrm{underlined}}$, each containing five independent runs with different seeds.
-
-![short-term forecasting experimental results](./figs/short_bench.jpg)
+![Methodology](./figs/methodology.jpg)

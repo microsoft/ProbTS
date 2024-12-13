@@ -8,10 +8,10 @@ import sys
 from probts.data import ProbTSBatchData
 from probts.data.data_utils.data_scaler import Scaler
 from probts.model.forecaster import Forecaster
-from probts.utils import Evaluator
+from probts.utils.evaluator import Evaluator
 from probts.utils.metrics import *
 from probts.utils.save_utils import update_metrics, calculate_weighted_average, load_checkpoint, get_hor_str
-
+from probts.utils.utils import init_class_helper
 
 def get_weights(sampling_weight_scheme, max_hor):
     '''
@@ -41,6 +41,8 @@ class ProbTSForecastModule(pl.LightningModule):
         quantiles_num: int = 10,
         load_from_ckpt: str = None,
         sampling_weight_scheme: str = 'none',
+        optimizer_config = None,
+        lr_scheduler_config = None,
         **kwargs
     ):
         super().__init__()
@@ -49,7 +51,15 @@ class ProbTSForecastModule(pl.LightningModule):
         self.load_from_ckpt = load_from_ckpt
         self.train_pred_len_list = train_pred_len_list
         self.forecaster = forecaster
-
+        self.optimizer_config = optimizer_config
+        self.scheduler_config = lr_scheduler_config
+        
+        if self.optimizer_config is not None:
+            print("optimizer config: ", self.optimizer_config)
+            
+        if self.scheduler_config is not None:
+            print("lr_scheduler config: ", self.scheduler_config)
+        
         self.scaler = scaler
         self.evaluator = Evaluator(quantiles_num=quantiles_num)
         
@@ -126,6 +136,7 @@ class ProbTSForecastModule(pl.LightningModule):
         metrics = self.evaluate(batch, stage='val',dataloader_idx=dataloader_idx)
         return metrics
 
+
     def on_validation_epoch_start(self):
         self.metrics_dict = {}
         self.hor_metrics = {}
@@ -163,5 +174,27 @@ class ProbTSForecastModule(pl.LightningModule):
         return forecasts
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        if self.optimizer_config is None:
+            optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        else:
+            optimizer = init_class_helper(self.optimizer_config['class_name'])
+            params = self.optimizer_config['init_args']
+            optimizer = optimizer(self.parameters(), **params)
+        
+        if self.scheduler_config is not None:
+            scheduler = init_class_helper(self.scheduler_config['class_name'])
+            params = self.scheduler_config['init_args']
+            scheduler = scheduler(optimizer=optimizer, **params)
+            
+            lr_scheduler = {
+                "scheduler": scheduler,
+                "interval": "epoch",
+                "frequency": 1,
+                "monitor": "val_loss",
+                "strict": True,
+                "name": None,
+            }
+
+            return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
+
         return optimizer
