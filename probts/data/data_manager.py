@@ -1,5 +1,6 @@
 import torch
 from pathlib import Path
+from functools import cached_property
 
 from gluonts.dataset.repository import dataset_names, datasets
 from gluonts.dataset.multivariate_grouper import MultivariateGrouper
@@ -7,6 +8,7 @@ from gluonts.dataset.multivariate_grouper import MultivariateGrouper
 from probts.data.data_utils.get_datasets import get_dataset_info, get_dataset_borders, load_dataset
 from probts.data.datasets.single_horizon_datasets import SingleHorizonDataset
 from probts.data.datasets.multi_horizon_datasets import MultiHorizonDataset
+from probts.data.datasets.gift_eval_datasets import GiftEvalDataset
 
 from probts.data.data_utils.time_features import get_lags
 from probts.data.data_utils.data_utils import split_train_val, truncate_test, get_rolling_test, df_to_mvds
@@ -14,7 +16,7 @@ from probts.data.data_wrapper import ProbTSBatchData
 from probts.utils.utils import ensure_list
 from probts.data.data_utils.data_scaler import StandardScaler, TemporalScaler, IdentityScaler
 from typing import Union
-import sys
+
 
 MULTI_VARIATE_DATASETS = [
     'exchange_rate_nips',
@@ -148,6 +150,10 @@ class DataManager:
         if dataset in dataset_names:
             self.multi_hor = False
             self._load_short_term_dataset()
+        elif self.is_gift_eval:
+            self.multi_hor = False
+            # Load GIFT eval datasets from salesforce
+            self._load_gift_eval_dataset()
         else:
             # Process context and prediction lengths
             self._process_context_and_prediction_lengths()
@@ -163,23 +169,44 @@ class DataManager:
             return TemporalScaler()
         return IdentityScaler()
     
-                         
+    def _load_gift_eval_dataset(self):
+        parts = self.dataset[5:].split('/')  # Remove first 'gift/'
+        self.dataset = '/'.join(parts[:-1])  # Join all parts except last one with '/'
+        gift_term = parts[-1] # corresponding to "term" parameter in GiftEvalDataset
+        TO_UNIVARIATE = False
+        self.dataset_raw = GiftEvalDataset(self.dataset, term=gift_term, to_univariate=TO_UNIVARIATE)
+        self._set_meta_parameters(self.dataset_raw.target_dim, self.dataset_raw.freq, self.dataset_raw.prediction_length)
+
+        dataset_loader = SingleHorizonDataset(
+            ProbTSBatchData.input_names_, 
+            self.history_length,
+            self.prediction_length,
+            self.freq,
+            self.multivariate
+        )
+
+        self.train_iter_dataset = dataset_loader.get_iter_dataset(self.dataset_raw.training_dataset, mode='train')
+        self.val_iter_dataset = dataset_loader.get_iter_dataset(self.dataset_raw.validation_dataset, mode='val')
+        self.test_iter_dataset = dataset_loader.get_iter_dataset(self.dataset_raw.test_dataset, mode='test')
+        self.time_feat_dim = dataset_loader.time_feat_dim
+    
     def _load_short_term_dataset(self):
         """Load short-term dataset using GluonTS."""
         # if self.multi_hor:
         #     raise ValueError("Short-term forecasting does not support multi-horizon training/inference.")
         print(f"Loading Short-term Dataset: {self.dataset}")
         self.dataset_raw = datasets.get_dataset(self.dataset, path=Path(self.path), regenerate=False)
-        self._set_meta_parameters(self.dataset_raw.metadata)
+        metadata = self.dataset_raw.metadata
+        self._set_meta_parameters(metadata.feat_static_cat[0].cardinality, metadata.freq.upper(), metadata.prediction_length)
         self.prepare_STSF_dataset(self.dataset)
-        
-    def _set_meta_parameters(self, metadata):
-        """Set meta parameters from dataset metadata."""
-        self.target_dim = int(metadata.feat_static_cat[0].cardinality)
-        self.freq = metadata.freq.upper()
+
+    def _set_meta_parameters(self, target_dim, freq, prediction_length):
+        """Set meta parameters from base dataset."""
+        self.target_dim = target_dim
+        self.freq = freq
         self.lags_list = get_lags(self.freq)
-        self.prediction_length = self.prediction_length or metadata.prediction_length
-        self.context_length = self.context_length or metadata.prediction_length * self.context_length_factor
+        self.prediction_length = prediction_length
+        self.context_length = self.context_length or self.prediction_length * self.context_length_factor
         self.history_length = self.history_length or (self.context_length + max(self.lags_list))
         
     def _process_context_and_prediction_lengths(self):
@@ -385,3 +412,7 @@ class DataManager:
         print(f"Test rolling length: {self.test_rolling_length}")
         if self.scaler_type == "standard":
             print(f"Variable-specific normalization: {self.var_specific_norm}")
+
+    @cached_property
+    def is_gift_eval(self) -> bool:
+        return self.dataset[:5] == "gift/"

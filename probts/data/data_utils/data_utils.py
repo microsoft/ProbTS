@@ -8,13 +8,13 @@ from gluonts.dataset.common import ListDataset
 from gluonts.dataset.field_names import FieldName
 
 
-def split_train_val(train_set, num_test_dates, context_length, prediction_length, freq):
+def split_train_val(train_set, num_test_windows, context_length, prediction_length, freq):
     """
     Splits a training dataset into a truncated training set and a validation set.
 
     Parameters:
     - train_set: The input training dataset.
-    - num_test_dates: Number of rolling windows for validation.
+    - num_test_windows: Number of rolling windows for validation.
     - context_length: Context length for the model.
     - prediction_length: Prediction horizon for the model.
     - freq: Data frequency (e.g., 'H' for hourly).
@@ -29,7 +29,7 @@ def split_train_val(train_set, num_test_dates, context_length, prediction_length
 
     for train_seq in iter(train_set):
         # truncate train set
-        offset = num_test_dates * prediction_length
+        offset = num_test_windows * prediction_length
         trunc_train_seq = deepcopy(train_seq)
 
         if len(train_seq[FieldName.TARGET].shape) == 1:
@@ -45,7 +45,7 @@ def split_train_val(train_set, num_test_dates, context_length, prediction_length
         trunc_train_list.append(trunc_train_seq)
 
         # construct val set by rolling
-        for i in range(num_test_dates):
+        for i in range(num_test_windows):
             val_seq = deepcopy(train_seq)
             rolling_len = trunc_train_len + prediction_length * (i+1)
             if univariate:
@@ -95,7 +95,7 @@ def truncate_test(test_set, context_length, prediction_length, freq):
     return trunc_test_set
 
 
-def get_rolling_test(stage, test_set, border_begin_idx, border_end_idx, rolling_length, pred_len, freq):
+def get_rolling_test(stage, test_set, border_begin_idx, border_end_idx, rolling_length, pred_len, freq=None):
     """
     Using rolling windows to build the test dataset.
 
@@ -111,12 +111,12 @@ def get_rolling_test(stage, test_set, border_begin_idx, border_end_idx, rolling_
     Returns:
     - rolling_test_set: Rolling test dataset (ListDataset).
     """
-    num_test_dates = math.ceil(((border_end_idx - border_begin_idx - pred_len) / rolling_length))
-    print(f"{stage}  pred_len: {pred_len} : num_test_dates: {num_test_dates}")
+    num_test_windows = math.ceil(((border_end_idx - border_begin_idx - pred_len) / rolling_length))
+    print(f"{stage}  pred_len: {pred_len} : num_test_windows: {num_test_windows}")
 
     test_set = next(iter(test_set))
     rolling_test_seq_list = list()
-    for i in range(num_test_dates):
+    for i in range(num_test_windows):
         rolling_test_seq = deepcopy(test_set)
         rolling_end = border_begin_idx + pred_len + i * rolling_length
         rolling_test_seq[FieldName.TARGET] = rolling_test_seq[FieldName.TARGET][:, :rolling_end]
@@ -126,6 +126,42 @@ def get_rolling_test(stage, test_set, border_begin_idx, border_end_idx, rolling_
         rolling_test_seq_list, freq=freq, one_dim_target=False
     )
     return rolling_test_set
+
+
+def get_rolling_test_of_gift_eval(dataset, prediction_length, windows):
+    """
+    Using rolling windows to build the test dataset for GiftEval.
+    https://github.com/SalesforceAIResearch/gift-eval/blob/61ec5e563188bc4b2d7e86f6a7fcc78270607ae7/src/gift_eval/data.py#L213
+    Get the windows from the back of the dataset, for example if the dataset has N time points:
+    - The first window will be from the first time point to the N - prediction_length * windows time point.
+    - The second window will be from the first time point to the N - prediction_length * (windows - 1) time point.
+    - The last window will be from the first time point to the N time point.
+
+    Parameters:
+    - dataset: The input dataset.
+    - prediction_length: Prediction length.
+    - windows: Number of rolling windows.
+
+    Returns:
+    - rolling_test_set: Rolling test dataset (ListDataset).
+    """
+    rolling_test_seq_list = list()
+    dataset = next(iter(dataset))
+    if "freq" not in dataset.keys():
+        raise ValueError("The dataset must contain the 'freq' key.")
+    freq = dataset["freq"]
+
+    for i in range(windows):
+        rolling_test_seq = deepcopy(dataset)
+        rolling_end = dataset[FieldName.TARGET].shape[1] - prediction_length * (windows - i)
+        rolling_test_seq[FieldName.TARGET] = dataset[FieldName.TARGET][:, :rolling_end]
+        rolling_test_seq_list.append(rolling_test_seq)
+
+    rolling_test_set = ListDataset(
+        rolling_test_seq_list, freq=freq, one_dim_target=False
+    )
+    return rolling_test_set
+
 
 
 def df_to_mvds(df, freq='H'):
