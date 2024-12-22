@@ -27,6 +27,7 @@ data:
       split_val: true
       scaler: standard # identity, standard, temporal
       context_length: 5000
+      auto_search: true
   batch_size: 64
   test_batch_size: 64
   num_workers: 8

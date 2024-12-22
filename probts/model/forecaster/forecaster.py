@@ -59,9 +59,14 @@ class Forecaster(nn.Module):
             self.scaler = None
         
         self.lags_dim = len(self.lags_list) * target_dim
-        self.feat_idx_emb = nn.Embedding(
-            num_embeddings=self.target_dim, embedding_dim=self.feat_idx_emb_dim
-        )
+        
+        if use_feat_idx_emb:
+            self.feat_idx_emb = nn.Embedding(
+                num_embeddings=self.target_dim, embedding_dim=self.feat_idx_emb_dim
+            )
+        else:
+            self.feat_idx_emb = None
+            
         self.input_size = self.get_input_size()
             
 
