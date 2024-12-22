@@ -184,6 +184,7 @@ class DataManager:
         dataset_loader = SingleHorizonDataset(
             ProbTSBatchData.input_names_, 
             self.history_length,
+            self.context_length,
             self.prediction_length,
             self.freq,
             self.multivariate
@@ -193,6 +194,8 @@ class DataManager:
         self.val_iter_dataset = dataset_loader.get_iter_dataset(self.dataset_raw.validation_dataset, mode='val')
         self.test_iter_dataset = dataset_loader.get_iter_dataset(self.dataset_raw.test_dataset, mode='test')
         self.time_feat_dim = dataset_loader.time_feat_dim
+        # TODO: Implement global mean for GIFT eval datasets
+        # self.global_mean = torch.mean(torch.tensor(self.dataset_raw.training_dataset[0]['target']), dim=-1)
     
     def _load_short_term_dataset(self):
         """Load short-term dataset using GluonTS."""
@@ -207,6 +210,7 @@ class DataManager:
     def _set_meta_parameters(self, target_dim, freq, prediction_length):
         """Set meta parameters from base dataset."""
         self.target_dim = target_dim
+        self.multivariate = self.target_dim > 1
         self.freq = freq
         self.lags_list = get_lags(self.freq)
         self.prediction_length = prediction_length

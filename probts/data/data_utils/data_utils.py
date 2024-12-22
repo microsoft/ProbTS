@@ -150,15 +150,21 @@ def get_rolling_test_of_gift_eval(dataset, prediction_length, windows):
     if "freq" not in dataset.keys():
         raise ValueError("The dataset must contain the 'freq' key.")
     freq = dataset["freq"]
+    is_univariate = len(dataset[FieldName.TARGET].shape) == 1
 
     for i in range(windows):
         rolling_test_seq = deepcopy(dataset)
-        rolling_end = dataset[FieldName.TARGET].shape[1] - prediction_length * (windows - i)
-        rolling_test_seq[FieldName.TARGET] = dataset[FieldName.TARGET][:, :rolling_end]
+        rolling_end = dataset[FieldName.TARGET].shape[-1] - prediction_length * (windows - i)
+        if is_univariate:
+            rolling_test_seq[FieldName.TARGET] = dataset[FieldName.TARGET][:rolling_end]
+        elif len(dataset[FieldName.TARGET].shape) == 2:
+            rolling_test_seq[FieldName.TARGET] = dataset[FieldName.TARGET][:, :rolling_end]
+        else:
+            raise ValueError(f"Invalid Data Shape: expected 1 or 2 dimensions, got {len(dataset[FieldName.TARGET].shape)}")
         rolling_test_seq_list.append(rolling_test_seq)
 
     rolling_test_set = ListDataset(
-        rolling_test_seq_list, freq=freq, one_dim_target=False
+        rolling_test_seq_list, freq=freq, one_dim_target=is_univariate
     )
     return rolling_test_set
 
