@@ -17,12 +17,12 @@ license = {text = "MIT"}
 
 dependencies = [
     "numpy",
-    "pandas",
+    "pandas==2.0.3",
     "einops",
     "matplotlib",
     "tqdm",
     "lightning @ https://github.com/Lightning-AI/lightning/archive/refs/heads/master.zip",
-    "gluonts==0.13.1",
+    "gluonts~=0.15.1",
     "typeshed-client==2.3.0",
     "docstring-parser==0.15",
     "orjson==3.9.0",
@@ -39,6 +39,7 @@ dependencies = [
     "reformer-pytorch",
     "gdown",
     "kagglehub",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
