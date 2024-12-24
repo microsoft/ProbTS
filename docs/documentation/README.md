@@ -241,6 +241,10 @@ For the datasets used for long-term forecasting scenario, we support three types
 
     *Note: Refer to the [Pandas Time Series Offset Aliases](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases) for the correct frequency values (`{FREQ}`) to use in your configuration.*
 
+
+- **Using Datasets from GIFT-EVAL Benchmarking**: see [this page](./docs/documentation/Gift_eval.md) for detailed instructions.
+
+
 ### Using Customized Dataset
 
 1. **Prepare the Data**: 

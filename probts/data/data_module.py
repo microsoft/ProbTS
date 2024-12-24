@@ -1,9 +1,16 @@
 import torch
 import lightning.pytorch as pl
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from probts.data.data_manager import DataManager
 from probts.data.data_wrapper import ProbTSBatchData
+
+class EmptyDataset(Dataset):
+    def __len__(self):
+        return 0
+
+    def __getitem__(self, idx):
+        raise IndexError("This dataset is empty.")
 
 class ProbTSDataModule(pl.LightningDataModule):
     r"""
@@ -23,7 +30,6 @@ class ProbTSDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.save_hyperparameters()
 
-    def setup(self, stage: str):
         self.dataset_train = self.data_manager.train_iter_dataset
         self.dataset_val = self.data_manager.val_iter_dataset
         self.dataset_test = self.data_manager.test_iter_dataset
@@ -47,6 +53,10 @@ class ProbTSDataModule(pl.LightningDataModule):
             )
 
     def val_dataloader(self):
+        # if no validation set available
+        if self.dataset_val is None:
+            return DataLoader(EmptyDataset(), batch_size=1)
+        
         if self.data_manager.multi_hor:
             val_dataloader = self.combine_dataloader(self.dataset_val)
         else:
