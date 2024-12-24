@@ -4,7 +4,6 @@ from functools import cached_property
 
 from gluonts.dataset.repository import dataset_names, datasets
 from gluonts.dataset.multivariate_grouper import MultivariateGrouper
-from gluonts.dataset.split import split
 
 from probts.data.data_utils.get_datasets import get_dataset_info, get_dataset_borders, load_dataset
 from probts.data.datasets.single_horizon_datasets import SingleHorizonDataset
@@ -17,7 +16,6 @@ from probts.data.data_wrapper import ProbTSBatchData
 from probts.utils.utils import ensure_list
 from probts.data.data_utils.data_scaler import StandardScaler, TemporalScaler, IdentityScaler
 from typing import Union
-import sys
 
 MULTI_VARIATE_DATASETS = [
     'exchange_rate_nips',
