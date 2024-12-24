@@ -110,11 +110,14 @@ class ProbTSCli(LightningCLI):
         ]
         
         if not self.model.forecaster.no_training:
-            # not using reweighting scheme for loss
-            if self.model.sampling_weight_scheme in ['none', 'fix']:
-                monitor = 'val_CRPS'
+            if self.datamodule.dataset_val is None:  # if the validation set is empty
+                monitor = "train_loss"
             else:
-                monitor = 'val_weighted_ND'
+                # not using reweighting scheme for loss
+                if self.model.sampling_weight_scheme in ['none', 'fix']:
+                    monitor = 'val_CRPS'
+                else:
+                    monitor = 'val_weighted_ND'
             
             # Set callbacks
             self.checkpoint_callback = ModelCheckpoint(
@@ -177,7 +180,11 @@ class ProbTSCli(LightningCLI):
         
         if not self.model.forecaster.no_training:
             self.set_fit_mode()
-            self.trainer.fit(model=self.model, datamodule=self.datamodule)
+            if self.datamodule.dataset_val is None:  # if the validation set is empty
+                self.trainer.fit(model=self.model, train_dataloaders=self.datamodule.train_dataloader())
+            else:
+                self.trainer.fit(model=self.model, datamodule=self.datamodule)
+            
             inference=False
         else:
             inference=True

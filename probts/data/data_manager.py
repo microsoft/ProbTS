@@ -17,7 +17,6 @@ from probts.utils.utils import ensure_list
 from probts.data.data_utils.data_scaler import StandardScaler, TemporalScaler, IdentityScaler
 from typing import Union
 
-
 MULTI_VARIATE_DATASETS = [
     'exchange_rate_nips',
     'solar_nips',
@@ -199,12 +198,14 @@ class DataManager:
     
     def _load_short_term_dataset(self):
         """Load short-term dataset using GluonTS."""
-        # if self.multi_hor:
-        #     raise ValueError("Short-term forecasting does not support multi-horizon training/inference.")
         print(f"Loading Short-term Dataset: {self.dataset}")
-        self.dataset_raw = datasets.get_dataset(self.dataset, path=Path(self.path), regenerate=False)
+        self.dataset_raw = datasets.get_dataset(self.dataset, path=Path(self.path), regenerate=True)
         metadata = self.dataset_raw.metadata
-        self._set_meta_parameters(metadata.feat_static_cat[0].cardinality, metadata.freq.upper(), metadata.prediction_length)
+        if self.is_univar_dataset:
+            target_dim = 1
+        else:
+            target_dim = metadata.feat_static_cat[0].cardinality
+        self._set_meta_parameters(target_dim, metadata.freq.upper(), metadata.prediction_length)
         self.prepare_STSF_dataset(self.dataset)
 
     def _set_meta_parameters(self, target_dim, freq, prediction_length):
@@ -387,6 +388,12 @@ class DataManager:
             test_set = test_grouper(self.dataset_raw.test)
             self.scaler.fit(torch.tensor(train_set[0]['target'].transpose(1, 0)))
             self.global_mean = torch.mean(torch.tensor(train_set[0]['target']), dim=-1)
+            
+            # split_val
+            if self.split_val:
+                train_set, val_set = split_train_val(train_set, self.num_test_dates, self.context_length, self.prediction_length, self.freq)
+            else:
+                val_set = None
         else:
             self.target_dim = 1
             self.multivariate = False
@@ -394,12 +401,12 @@ class DataManager:
             train_set = self.dataset_raw.train
             test_set = self.dataset_raw.test
             test_set = truncate_test(test_set, self.context_length, self.prediction_length, self.freq)
-            
-        if self.split_val:
-            train_set, val_set = split_train_val(train_set, self.num_test_dates, self.context_length, self.prediction_length, self.freq)
-        else:
-            val_set = test_set
+            # for univariate dataset, e.g., M4 and M5, no validation set is used
+            val_set = None
 
+        if val_set is None:
+            print('No validation set is used.')
+            
         dataset_loader = SingleHorizonDataset(
             ProbTSBatchData.input_names_, 
             self.history_length,
@@ -410,7 +417,10 @@ class DataManager:
         )
 
         self.train_iter_dataset = dataset_loader.get_iter_dataset(train_set, mode='train')
-        self.val_iter_dataset = dataset_loader.get_iter_dataset(val_set, mode='val')
+        if val_set is not None:
+            self.val_iter_dataset = dataset_loader.get_iter_dataset(val_set, mode='val')
+        else:
+            self.val_iter_dataset = None
         self.test_iter_dataset = dataset_loader.get_iter_dataset(test_set, mode='test')
         self.time_feat_dim = dataset_loader.time_feat_dim
 
@@ -426,3 +436,9 @@ class DataManager:
     @cached_property
     def is_gift_eval(self) -> bool:
         return self.dataset[:5] == "gift/"
+    
+    @cached_property
+    def is_univar_dataset(self) -> bool:
+        if 'm4' in self.dataset or 'm5' in self.dataset:
+            return True
+        return False
