@@ -60,16 +60,6 @@ class Evaluator:
             [metrics[self.weighted_loss_name(q)] for q in self.quantiles]
         )
         
-        # scaled CRPS
-        
-        # for q in self.quantiles:
-        #     q_forecasts = np.quantile(forecasts, q, axis=samples_dim)
-        #     metrics['mean_weighted_'+self.loss_name(q)] = np.mean(scaled_quantile_loss(targets, q_forecasts, q, seasonal_error))
-        #     metrics['mean_scale_'+self.weighted_loss_name(q)] = \
-        #         metrics['mean_scale_'+self.loss_name(q)] / metrics["abs_target_sum"]
-        #     metrics[self.coverage_name(q)] = coverage(targets, q_forecasts)
-        
-        
         metrics["MAE_Coverage"] = np.mean(
             [
                 np.abs(metrics[self.coverage_name(q)] - np.array([q]))
@@ -118,9 +108,6 @@ class Evaluator:
         Dict[String, float]
             metrics
         """
-        # targets = targets.cpu().detach().numpy()
-        # forecasts = forecasts.cpu().detach().numpy()
-        # past_data = past_data.cpu().detach().numpy()
         
         targets = process_tensor(targets)
         forecasts = process_tensor(forecasts)

@@ -13,43 +13,6 @@ from probts.utils.metrics import *
 from probts.utils.save_utils import update_metrics, calculate_weighted_average, load_checkpoint, get_hor_str
 from probts.utils.utils import init_class_helper
 
-
-import itertools
-from collections import ChainMap
-from gluonts.ev.ts_stats import seasonal_error
-from typing import Iterable, List
-from gluonts.model import Forecast
-
-from gluonts.ev.metrics import (
-    MSE,
-    MAE,
-    MASE,
-    MAPE,
-    SMAPE,
-    MSIS,
-    RMSE,
-    NRMSE,
-    ND,
-    MeanWeightedSumQuantileLoss,
-)
-
-# Instantiate the metrics
-metrics_func = [
-    MSE(forecast_type="mean"),
-    MSE(forecast_type=0.5),
-    MAE(),
-    MASE(),
-    MAPE(),
-    SMAPE(),
-    MSIS(),
-    RMSE(),
-    NRMSE(),
-    ND(),
-    MeanWeightedSumQuantileLoss(
-        quantile_levels=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    ),
-]
-
 def get_weights(sampling_weight_scheme, max_hor):
     '''
     return: w [max_hor]
@@ -150,34 +113,6 @@ class ProbTSForecastModule(pl.LightningModule):
         norm_metrics = self.evaluator(norm_future_data, forecasts, past_data=norm_past_data, freq=self.forecaster.freq)
         self.metrics_dict = update_metrics(norm_metrics, stage, 'norm', target_dict=self.metrics_dict)
         
-        ###########
-        
-        evaluators = {}
-        for metric in metrics_func:
-            evaluator = metric(axis=None)
-            evaluators[evaluator.name] = evaluator
-        
-        input_batches = iter(orin_past_data.cpu())
-        label_batches = iter(orin_future_data.cpu())
-        forecast_batches = iter(denorm_forecasts.cpu())
-        season_length = get_seasonality(self.forecaster.freq)
-        
-        for input_batch, label_batch, forecast_batch in zip(
-            input_batches, label_batches, forecast_batches
-        ):
-            data_batch = self._get_data_batch(
-                input_batch,
-                label_batch,
-                forecast_batch,
-                seasonality=season_length,
-                mask_invalid_label=True,
-                allow_nan_forecast=False,
-            )
-
-            for evaluator in evaluators.values():
-                evaluator.update(data_batch)
-        ############
-        
         l = orin_future_data.shape[1]
         
         if stage != 'test' and self.sampling_weight_scheme not in ['fix', 'none']:
@@ -263,63 +198,3 @@ class ProbTSForecastModule(pl.LightningModule):
             return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
         return optimizer
-
-    def _get_data_batch(
-        self,
-        input_batch,
-        label_batch,
-        forecast_batch,
-        seasonality: Optional[int] = None,
-        mask_invalid_label: bool = True,
-        allow_nan_forecast: bool = False,
-    ) -> ChainMap:
-        label_target = np.stack([label for label in label_batch], axis=0)
-        if mask_invalid_label:
-            label_target = np.ma.masked_invalid(label_target)
-
-        other_data = {
-            "label": label_target,
-        }
-
-        seasonal_error_values = []
-        for input_ in input_batch:
-            seasonality_entry = seasonality
-            # if seasonality_entry is None:
-            #     seasonality_entry = get_seasonality(input_["start"].freqstr)
-            input_target = input_
-            if mask_invalid_label:
-                input_target = np.ma.masked_invalid(input_target)
-            seasonal_error_values.append(
-                seasonal_error(
-                    input_target,
-                    seasonality=seasonality_entry,
-                    time_axis=-1,
-                )
-            )
-        other_data["seasonal_error"] = np.array(seasonal_error_values)
-        # print("label_target.shape ", label_target.shape)
-
-        return ChainMap(
-            other_data, BatchForecast(forecast_batch, allow_nan=allow_nan_forecast)  # type: ignore
-        )
-
-
-from dataclasses import dataclass
-
-@dataclass
-class BatchForecast:
-    """
-    Wrapper around ``Forecast`` objects, that adds a batch dimension to arrays
-    returned by ``__getitem__``, for compatibility with ``gluonts.ev``.
-    """
-
-    forecasts: List[Forecast]
-    allow_nan: bool = False
-
-    def __getitem__(self, name):
-        
-        values = [forecast.T for forecast in self.forecasts]
-        res = np.stack(values, axis=0)
-        # print("res.shape ", res.shape)
-        # sys.exit(0)
-        return res
