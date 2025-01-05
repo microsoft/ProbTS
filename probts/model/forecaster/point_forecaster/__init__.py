@@ -1,4 +1,5 @@
 from .mean import MeanForecaster
+from .naive import NaiveForecaster
 from .linear import LinearForecaster
 from .patchtst import PatchTST
 from .transformer import TransformerForecaster
