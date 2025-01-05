@@ -123,15 +123,16 @@ def smape(target: np.ndarray, forecast: np.ndarray) -> float:
         np.abs(target - forecast) / (np.abs(target) + np.abs(forecast))
     )
 
-
 def quantile_loss(target: np.ndarray, forecast: np.ndarray, q: float) -> float:
     r"""
     .. math::
 
         quantile\_loss = 2 * sum(|(Y - \hat{Y}) * ((Y <= \hat{Y}) - q)|)
     """
-    return 2 * np.sum(np.abs((forecast - target) * ((target <= forecast) - q)))
+    return 2 * np.abs((forecast - target) * ((target <= forecast) - q))
 
+def scaled_quantile_loss(target: np.ndarray, forecast: np.ndarray, q: float, seasonal_error) -> np.ndarray:
+    return quantile_loss(target, forecast, q) / seasonal_error
 
 def coverage(target: np.ndarray, forecast: np.ndarray) -> float:
     r"""

@@ -1,6 +1,6 @@
 import numpy as np
 from .metrics import *
-
+import torch
 
 class Evaluator:
     
@@ -48,7 +48,7 @@ class Evaluator:
 
         for q in self.quantiles:
             q_forecasts = np.quantile(forecasts, q, axis=samples_dim)
-            metrics[self.loss_name(q)] = quantile_loss(targets, q_forecasts, q)
+            metrics[self.loss_name(q)] = np.sum(quantile_loss(targets, q_forecasts, q))
             metrics[self.weighted_loss_name(q)] = \
                 metrics[self.loss_name(q)] / metrics["abs_target_sum"]
             metrics[self.coverage_name(q)] = coverage(targets, q_forecasts)
@@ -59,6 +59,7 @@ class Evaluator:
         metrics["CRPS"] = np.mean(
             [metrics[self.weighted_loss_name(q)] for q in self.quantiles]
         )
+        
         metrics["MAE_Coverage"] = np.mean(
             [
                 np.abs(metrics[self.coverage_name(q)] - np.array([q]))
@@ -107,9 +108,11 @@ class Evaluator:
         Dict[String, float]
             metrics
         """
-        targets = targets.cpu().detach().numpy()
-        forecasts = forecasts.cpu().detach().numpy()
-        past_data = past_data.cpu().detach().numpy()
+        
+        targets = process_tensor(targets)
+        forecasts = process_tensor(forecasts)
+        past_data = process_tensor(past_data)
+        
         if self.ignore_invalid_values:
             targets = np.ma.masked_invalid(targets)
             forecasts = np.ma.masked_invalid(forecasts)
@@ -126,3 +129,12 @@ class Evaluator:
             if k in metrics_sum:
                 output_metrics[f"{k}-Sum"] = metrics_sum[k]
         return output_metrics
+    
+def process_tensor(targets):
+    if isinstance(targets, torch.Tensor):
+        targets = targets.cpu().detach().numpy()
+    elif isinstance(targets, np.ndarray):
+        pass 
+    else:
+        raise TypeError("targets must be a torch.Tensor or a numpy.ndarray")
+    return targets
