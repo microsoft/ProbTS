@@ -75,24 +75,30 @@ def convert_to_list(s):
     else:
         return None
     
+
 def find_best_epoch(ckpt_folder):
     """
     Find the highest epoch in the Test Tube file structure.
-    :param ckpt_folder: dir where the checpoints are being saved.
-    :return: Integer of the highest epoch reached by the checkpoints.
+    Thanks to GitHub@Kai-Ref for identifying and fixing the issue with CRPS value comparisons.
     """
-    pattern = r"val_CRPS=([0-9]*\.[0-9]+)"
-    ckpt_files = os.listdir(ckpt_folder)  # list of strings
-    epochs = []
+    pattern = r"epoch=(\d+)-val_CRPS=([0-9]*\.[0-9]+)"
+    ckpt_files = os.listdir(ckpt_folder)  # List of checkpoint files
+    
+    best_ckpt = None
+    best_epoch = None
+    best_crps = float("inf")  # Start with an infinitely large CRPS
+    
     for filename in ckpt_files:
         match = re.search(pattern, filename)
-        if match:  
-            epochs.append(match.group(1))
-    # epochs = [float(filename[18:-5]) for filename in ckpt_files]  # 'epoch={int}.ckpt' filename format
-    best_crps = min(epochs)
-    
-    best_epoch = epochs.index(best_crps)
-    return best_epoch, ckpt_files[best_epoch]
+        if match:
+            epoch = int(match.group(1))  # Extract epoch number
+            crps = float(match.group(2))  # Extract CRPS value
+            
+            if crps < best_crps:  # If this is the lowest CRPS found so far
+                best_crps = crps
+                best_ckpt = filename
+                best_epoch = epoch  # Store the best epoch number
+    return best_epoch, best_ckpt
 
 def ensure_list(input_value, default_value=None):
     """
