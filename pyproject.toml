@@ -29,7 +29,7 @@ dependencies = [
     "einops>=0.6.1",
     "pydantic==1.10.8",
     "linear-attention-transformer==0.19.1",
-    "ray==2.8.1",
+    "ray==2.43.0",
     "tensorboardx==2.6.2",
     "pyarrow==11.0.0",
     "protobuf>=3.19",
