@@ -83,7 +83,8 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the train epoch begins"""
-        self.train_memtrace = MemoryTrace()
+        if torch.cuda.is_available():
+            self.train_memtrace = MemoryTrace()
     
     def on_train_epoch_end(
         self,
@@ -91,8 +92,9 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the train epoch ends"""
-        self.train_memtrace.__exit__()
-        self.update_memory_summary('train', self.train_memtrace)
+        if torch.cuda.is_available():
+            self.train_memtrace.__exit__()
+            self.update_memory_summary('train', self.train_memtrace)
 
     def on_validation_epoch_start(
         self,
@@ -100,7 +102,8 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the validation epoch begins"""
-        self.val_memtrace = MemoryTrace()
+        if torch.cuda.is_available():
+            self.val_memtrace = MemoryTrace()
     
     def on_validation_epoch_end(
         self,
@@ -108,8 +111,9 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the validation epoch ends"""
-        self.val_memtrace.__exit__()
-        self.update_memory_summary('val', self.val_memtrace)
+        if torch.cuda.is_available():
+            self.val_memtrace.__exit__()
+            self.update_memory_summary('val', self.val_memtrace)
     
     def on_test_epoch_start(
         self,
@@ -117,7 +121,8 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the test epoch begins"""
-        self.test_memtrace = MemoryTrace()
+        if torch.cuda.is_available():
+            self.test_memtrace = MemoryTrace()
     
     def on_test_epoch_end(
         self,
@@ -125,5 +130,6 @@ class MemoryCallback(Callback):
         pl_module: "pl.LightningModule"
     ) -> None:
         """Called when the test epoch ends"""
-        self.test_memtrace.__exit__()
-        self.update_memory_summary('test', self.test_memtrace)
+        if torch.cuda.is_available():
+            self.test_memtrace.__exit__()
+            self.update_memory_summary('test', self.test_memtrace)

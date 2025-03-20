@@ -1,4 +1,3 @@
-export CUDA_VISIBLE_DEVICES=0
 MODEL=patchtst
 DATASET=etth1
 CTX_LEN=96

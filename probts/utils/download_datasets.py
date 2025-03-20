@@ -84,4 +84,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     download_and_extract_zip(args.data_path, zip_name='all_datasets')
-    download_datasets_from_kaggle(args.data_path)
+    try:
+        download_datasets_from_kaggle(args.data_path)
+    except:
+        print("Cannot download datasets from kaggle, skip it.")
