@@ -11,10 +11,10 @@ trainer:
   default_root_dir: ./results
 model:
   forecaster:
-    class_path: probts.model.forecaster.prob_forecaster.Chronos
+    class_path: probts.model.forecaster.point_forecaster.TimeMoE
     init_args:
-      model_size: base # tiny, mini, small, base, large
-  num_samples: 100
+        model_size: 200M # select from ['50M', '200M']
+        instance_norm: true
   quantiles_num: 20
 data:
   data_manager:
@@ -22,7 +22,8 @@ data:
     init_args:
       dataset: solar_nips
       split_val: true
-      scaler: standard # identity, standard, temporal
-  batch_size: 16
-  test_batch_size: 16
+      scaler: identity # identity, standard, temporal
+      var_specific_norm: true
+  batch_size: 64
+  test_batch_size: 64
   num_workers: 8
