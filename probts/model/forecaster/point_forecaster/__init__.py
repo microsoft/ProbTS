@@ -12,6 +12,8 @@ from .itransformer import iTransformer
 from .autoformer import Autoformer
 from .tsmixer import TSMixer
 from .elastst import ElasTST
+from .time_moe import TimeMoE
+from .timesfm import TimesFM
 
 # ------- add timesfm to sys.path ----------
 try:
@@ -29,11 +31,10 @@ except Exception as e:
 import importlib
 
 modules = [
-    ('timesfm', 'TimesFM'),
     ('timer', 'Timer'),
     ('units', 'UniTS'),
     ('forecastpfn', 'ForecastPFN'),
-    ('tinytimemixer', 'TinyTimeMixer')
+    ('tinytimemixer', 'TinyTimeMixer'),
 ]
 
 for module, class_name in modules:

@@ -210,7 +210,7 @@ class DataManager:
 
     def _set_meta_parameters(self, target_dim, freq, prediction_length):
         """Set meta parameters from base dataset."""
-        self.target_dim = target_dim
+        self.target_dim = int(target_dim)
         self.multivariate = self.target_dim > 1
         self.freq = freq
         self.lags_list = get_lags(self.freq)

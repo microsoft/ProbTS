@@ -7,6 +7,8 @@
 
 ## News :tada:
 
+:triangular_flag_on_post: **Apr 2025**: ProbTS now includes [Time-MoE](https://github.com/Time-MoE/Time-MoE) and offers improved support for foundation models of varying sizes. See [Foundation Models](#foundation-models) for details.
+
 :triangular_flag_on_post: **Dec 2024**: ProbTS now supports [GIFT-EVAL](https://github.com/SalesforceAIResearch/gift-eval?tab=readme-ov-file#installation) benchmark datasets! Visit [this page](./docs/documentation/Gift_eval.md) for detailed instructions. *Please note that this feature is still in beta version and may contain bugs or inconsistencies. We will continue to update and improve it.*
 
 :triangular_flag_on_post: **Dec 2024**: Added quick guides for benchmarking foundation models. Visit [this page](./docs/benchmark/foundation_model/README.md) for detailed instructions.
@@ -61,19 +63,19 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 
 ### Foundation Models
 
-| **Model** | **Any Horizon** | **Estimation** | **Decoding Scheme** | **Class Path** |
-| --- | --- | --- | --- | --- |
-| [Lag-Llama](https://arxiv.org/abs/2310.08278) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.LagLlama` |
-| [ForecastPFN](https://arxiv.org/abs/2311.01933) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.ForecastPFN` |
-| [TimesFM](https://arxiv.org/abs/2310.10688) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.TimesFM` |
-| [TTM](https://arxiv.org/abs/2401.03955) | &#x2718; | Point | NAR | `probts.model.forecaster.point_forecaster.TinyTimeMixer` |
-| [Timer](https://arxiv.org/abs/2402.02368) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.Timer` |
-| [MOIRAI](https://arxiv.org/abs/2402.02592) | &#x2714; | Probabilistic | NAR | `probts.model.forecaster.prob_forecaster.Moirai` |
-| [UniTS](https://arxiv.org/abs/2403.00131) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.UniTS` |
-| [Chronos](https://arxiv.org/abs/2403.07815) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.Chronos` |
+| **Model** | **Any Horizon** | **Estimation** | **Decoding Scheme** | **Class Path** | **Model Size** | 
+| --- | --- | --- | --- | --- | --- |
+| [Lag-Llama](https://arxiv.org/abs/2310.08278) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.LagLlama` | - |
+| [ForecastPFN](https://arxiv.org/abs/2311.01933) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.ForecastPFN` | - |
+| [TimesFM](https://arxiv.org/abs/2310.10688) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.TimesFM` | `200m`, `500m` |
+| [TTM](https://arxiv.org/abs/2401.03955) | &#x2718; | Point | NAR | `probts.model.forecaster.point_forecaster.TinyTimeMixer` | - |
+| [Timer](https://arxiv.org/abs/2402.02368) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.Timer` | - |
+| [MOIRAI](https://arxiv.org/abs/2402.02592) | &#x2714; | Probabilistic | NAR | `probts.model.forecaster.prob_forecaster.Moirai` | `small`, `base`, `large` |
+| [UniTS](https://arxiv.org/abs/2403.00131) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.UniTS` | - |
+| [Chronos](https://arxiv.org/abs/2403.07815) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.Chronos` | `tiny`, `mini`, `small`, `base`, `large` |
+| [Time-MoE](https://arxiv.org/abs/2409.16040) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.TimeMoE` | `50M`, `200M` |
 
-Stay tuned for more models to be added in the future.
-
+See the [tsfm configuration directory](./config/tsfm/) for more details. More models will be added soon—stay tuned!
 
 ## Setup :wrench:
 
@@ -116,10 +118,6 @@ pip uninstall -y probts # recommended to uninstall the root package (optional)
 # For MOIRAI, we fix the version of the package for better performance
 cd submodules/uni2ts
 git reset --hard fce6a6f57bc3bc1a57c7feb3abc6c7eb2f264301
-
-# For TimesFM, fix the version for reproducibility (optional)
-cd submodules/timesfm
-git reset --hard 5c7b905
 
 # For Lag-Llama, fix the version for reproducibility (optional)
 cd submodules/lag_llama

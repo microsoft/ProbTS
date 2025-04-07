@@ -315,18 +315,19 @@ ProbTS includes both classical time-series models, specializing in long-term poi
 
 **Fundation Models**
 
-| **Model** | **Any Horizon** | **Estimation** | **Decoding Scheme** | **Class Path** |
-| --- | --- | --- | --- | --- |
-| [Lag-Llama](https://arxiv.org/abs/2310.08278) | &#x2714; | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.LagLlama` |
-| [ForecastPFN](https://arxiv.org/abs/2311.01933) | &#x2714; | Point | Non-auto | `probts.model.forecaster.point_forecaster.ForecastPFN` |
-| [TimesFM](https://arxiv.org/abs/2310.10688) | &#x2714; | Point | Auto | `probts.model.forecaster.point_forecaster.TimesFM` |
-| [TTM](https://arxiv.org/abs/2401.03955) | &#x2718; | Point | Non-auto | `probts.model.forecaster.point_forecaster.TinyTimeMixer` |
-| [Timer](https://arxiv.org/abs/2402.02368) | &#x2714; | Point | Auto | `probts.model.forecaster.point_forecaster.Timer` |
-| [MOIRAI](https://arxiv.org/abs/2402.02592) | &#x2714; | Probabilistic | Non-auto | `probts.model.forecaster.prob_forecaster.Moirai` |
-| [UniTS](https://arxiv.org/abs/2403.00131) | &#x2714; | Point | Non-auto | `probts.model.forecaster.point_forecaster.UniTS` |
-| [Chronos](https://arxiv.org/abs/2403.07815) | &#x2714; | Probabilistic | Auto | `probts.model.forecaster.prob_forecaster.Chronos` |
+| **Model** | **Any Horizon** | **Estimation** | **Decoding Scheme** | **Class Path** | **Model Size** | 
+| --- | --- | --- | --- | --- | --- |
+| [Lag-Llama](https://arxiv.org/abs/2310.08278) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.LagLlama` | - |
+| [ForecastPFN](https://arxiv.org/abs/2311.01933) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.ForecastPFN` | - |
+| [TimesFM](https://arxiv.org/abs/2310.10688) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.TimesFM` | `200m`, `500m` |
+| [TTM](https://arxiv.org/abs/2401.03955) | &#x2718; | Point | NAR | `probts.model.forecaster.point_forecaster.TinyTimeMixer` | - |
+| [Timer](https://arxiv.org/abs/2402.02368) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.Timer` | - |
+| [MOIRAI](https://arxiv.org/abs/2402.02592) | &#x2714; | Probabilistic | NAR | `probts.model.forecaster.prob_forecaster.Moirai` | `small`, `base`, `large` |
+| [UniTS](https://arxiv.org/abs/2403.00131) | &#x2714; | Point | NAR | `probts.model.forecaster.point_forecaster.UniTS` | - |
+| [Chronos](https://arxiv.org/abs/2403.07815) | &#x2714; | Probabilistic | AR | `probts.model.forecaster.prob_forecaster.Chronos` | `tiny`, `mini`, `small`, `base`, `large` |
+| [Time-MoE](https://arxiv.org/abs/2409.16040) | &#x2714; | Point | AR | `probts.model.forecaster.point_forecaster.TimeMoE` | `50M`, `200M` |
 
-Stay tuned for more models to be added in the future.
+See the [tsfm configuration directory](./config/tsfm/) for more details. More models will be added soon—stay tuned!
 
 
 

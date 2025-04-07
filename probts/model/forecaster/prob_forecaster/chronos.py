@@ -9,9 +9,9 @@
 
 
 import torch
-from chronos import ChronosPipeline
+# from chronos import ChronosPipeline
 from einops import rearrange
-
+from probts.model.nn.arch.ChronosModule.base import BaseChronosPipeline
 from probts.model.forecaster import Forecaster
 
 
@@ -22,9 +22,7 @@ class Chronos(Forecaster):
         **kwargs
     ):
         super().__init__(**kwargs)
-        
-        # self.pred_len = kwargs.get('prediction_length')
-        
+
         if type(self.prediction_length) == list:
             self.prediction_length = max(self.prediction_length)
             
@@ -36,12 +34,14 @@ class Chronos(Forecaster):
 
         # Load pretrained model
         self.no_training = True
-        # Load Chronos
-        self.pipeline = ChronosPipeline.from_pretrained(
-            "amazon/chronos-t5-{}".format(model_size),
-            device_map="cuda",
-            torch_dtype=torch.bfloat16,
-        )
+
+        self.pipeline = BaseChronosPipeline.from_pretrained(
+            f"amazon/chronos-t5-{model_size}",  # use "amazon/chronos-bolt-small" for the corresponding Chronos-Bolt model
+            device_map="cuda", 
+            torch_dtype=torch.bfloat16,)
+        
+        self.q = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] # Quantile levels
+
 
 
     def forecast(self, batch_data, num_samples=None):
@@ -49,7 +49,7 @@ class Chronos(Forecaster):
         inputs = inputs[:, -self.context_length:]
         
         B, _, K = inputs.shape
-        inputs = rearrange(inputs, 'b l k -> (b k) l').cpu()
+        inputs = rearrange(inputs, 'b l k -> (b k) l')#.cpu()
         context = [inputs[i] for i in range(B*K)]
         inner_batch_size = 12 # for 80G gpu
         forecast_samples = []
