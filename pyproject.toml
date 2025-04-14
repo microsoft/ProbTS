@@ -21,6 +21,7 @@ dependencies = [
     "einops",
     "matplotlib",
     "tqdm",
+    "PyYAML>=6.0",
     "lightning @ https://github.com/Lightning-AI/lightning/archive/refs/heads/master.zip",
     "gluonts~=0.15.1",
     "typeshed-client==2.3.0",
@@ -28,9 +29,8 @@ dependencies = [
     "orjson==3.9.0",
     "einops>=0.6.1",
     "pydantic==1.10.8",
-    "transformers==4.40.1",
+    "transformers==4.48.0",
     "linear-attention-transformer==0.19.1",
-    "ray==2.8.1",
     "tensorboardx==2.6.2",
     "pyarrow==11.0.0",
     "protobuf>=3.19",
@@ -41,6 +41,9 @@ dependencies = [
     "gdown",
     "kagglehub",
     "python-dotenv>=1.0.0",
+    "utilsforecast",
+    "jax",
+    "scikit-learn",
 ]
 
 [project.optional-dependencies]
@@ -62,7 +65,6 @@ tsfm = [
     "einshape>=1.0.0",
     "numpy>=1.26.4",
     "pandas==2.0.3",
-    "utilsforecast",
     "pykeops",
 ]
 
