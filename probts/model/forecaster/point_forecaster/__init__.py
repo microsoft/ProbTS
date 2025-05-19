@@ -14,6 +14,7 @@ from .tsmixer import TSMixer
 from .elastst import ElasTST
 from .time_moe import TimeMoE
 from .timesfm import TimesFM
+from .moderntcn import ModernTCN
 
 # ------- add timesfm to sys.path ----------
 try:
