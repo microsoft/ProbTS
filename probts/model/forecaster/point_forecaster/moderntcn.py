@@ -11,8 +11,8 @@ import torch
 import torch.nn as nn
 from typing import List
 from probts.model.forecaster import Forecaster
-from probts.model.nn.arch.ModernTCNModule.ModernTCN_Layer import series_decomp
-from probts.model.nn.arch.ModernTCNModule.ModernTCN_backbone import ModernTCNModel
+from probts.model.nn.arch.decomp import series_decomp
+from probts.model.nn.arch.ModernTCN_backbone import ModernTCNModel
 # torch.backends.cudnn.enabled = False
 
 class ModernTCN(Forecaster):

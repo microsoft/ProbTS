@@ -2,7 +2,43 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from probts.model.nn.arch.RevIN import RevIN
-from probts.model.nn.arch.ModernTCNModule.ModernTCN_Layer import series_decomp, Flatten_Head
+from probts.model.nn.arch.decomp import series_decomp
+
+# forecast task head
+class Flatten_Head(nn.Module):
+    def __init__(self, individual, n_vars, nf, target_window, head_dropout=0):
+        super(Flatten_Head, self).__init__()
+
+        self.individual = individual
+        self.n_vars = n_vars
+
+        if self.individual:
+            self.linears = nn.ModuleList()
+            self.dropouts = nn.ModuleList()
+            self.flattens = nn.ModuleList()
+            for i in range(self.n_vars):
+                self.flattens.append(nn.Flatten(start_dim=-2))
+                self.linears.append(nn.Linear(nf, target_window))
+                self.dropouts.append(nn.Dropout(head_dropout))
+        else:
+            self.flatten = nn.Flatten(start_dim=-2)
+            self.linear = nn.Linear(nf, target_window)
+            self.dropout = nn.Dropout(head_dropout)
+
+    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
+        if self.individual:
+            x_out = []
+            for i in range(self.n_vars):
+                z = self.flattens[i](x[:, i, :, :])  # z: [bs x d_model * patch_num]
+                z = self.linears[i](z)  # z: [bs x target_window]
+                z = self.dropouts[i](z)
+                x_out.append(z)
+            x = torch.stack(x_out, dim=1)  # x: [bs x nvars x target_window]
+        else:
+            x = self.flatten(x)
+            x = self.linear(x)
+            x = self.dropout(x)
+        return x
 
 class LayerNorm(nn.Module):
     def __init__(self, channels, eps=1e-6, data_format="channels_last"):
@@ -345,71 +381,3 @@ class ModernTCNModel(nn.Module):
             if hasattr(m, 'merge_kernel'):
                 m.merge_kernel()
 
-
-class Model(nn.Module):
-    def __init__(self, configs):
-        super(Model, self).__init__()
-        # hyper param
-
-        self.stem_ratio = configs.stem_ratio
-        self.downsample_ratio = configs.downsample_ratio
-        self.ffn_ratio = configs.ffn_ratio
-        self.num_blocks = configs.num_blocks
-        self.large_size = configs.large_size
-        self.small_size = configs.small_size
-        self.dims = configs.dims
-        self.dw_dims = configs.dw_dims
-
-        self.nvars = configs.enc_in
-        self.small_kernel_merged = configs.small_kernel_merged
-        self.drop_backbone = configs.dropout
-        self.drop_head = configs.head_dropout
-        self.use_multi_scale = configs.use_multi_scale
-        self.revin = configs.revin
-        self.affine = configs.affine
-        self.subtract_last = configs.subtract_last
-
-        self.freq = configs.freq
-        self.seq_len = configs.seq_len
-        self.c_in = self.nvars,
-        self.individual = configs.individual
-        self.target_window = configs.pred_len
-
-        self.kernel_size = configs.kernel_size
-        self.patch_size = configs.patch_size
-        self.patch_stride = configs.patch_stride
-
-
-        # decomp
-        self.decomposition = configs.decomposition
-        if self.decomposition:
-            self.decomp_module = series_decomp(self.kernel_size)
-            self.model_res = ModernTCNModel(patch_size=self.patch_size,patch_stride=self.patch_stride,stem_ratio=self.stem_ratio, downsample_ratio=self.downsample_ratio, ffn_ratio=self.ffn_ratio, num_blocks=self.num_blocks, large_size=self.large_size, small_size=self.small_size, dims=self.dims, dw_dims=self.dw_dims,
-                 nvars=self.nvars, small_kernel_merged=self.small_kernel_merged, backbone_dropout=self.drop_backbone, head_dropout=self.drop_head, use_multi_scale=self.use_multi_scale, revin=self.revin, affine=self.affine,
-                 subtract_last=self.subtract_last, freq=self.freq, seq_len=self.seq_len, c_in=self.c_in, individual=self.individual, target_window=self.target_window)
-            self.model_trend = ModernTCNModel(patch_size=self.patch_size,patch_stride=self.patch_stride,stem_ratio=self.stem_ratio, downsample_ratio=self.downsample_ratio, ffn_ratio=self.ffn_ratio, num_blocks=self.num_blocks, large_size=self.large_size, small_size=self.small_size, dims=self.dims, dw_dims=self.dw_dims,
-                 nvars=self.nvars, small_kernel_merged=self.small_kernel_merged, backbone_dropout=self.drop_backbone, head_dropout=self.drop_head, use_multi_scale=self.use_multi_scale, revin=self.revin, affine=self.affine,
-                 subtract_last=self.subtract_last, freq=self.freq, seq_len=self.seq_len, c_in=self.c_in, individual=self.individual, target_window=self.target_window)
-        else:
-            self.model = ModernTCNModel(patch_size=self.patch_size,patch_stride=self.patch_stride,stem_ratio=self.stem_ratio, downsample_ratio=self.downsample_ratio, ffn_ratio=self.ffn_ratio, num_blocks=self.num_blocks, large_size=self.large_size, small_size=self.small_size, dims=self.dims, dw_dims=self.dw_dims,
-                 nvars=self.nvars, small_kernel_merged=self.small_kernel_merged, backbone_dropout=self.drop_backbone, head_dropout=self.drop_head, use_multi_scale=self.use_multi_scale, revin=self.revin, affine=self.affine,
-                 subtract_last=self.subtract_last, freq=self.freq, seq_len=self.seq_len, c_in=self.c_in, individual=self.individual, target_window=self.target_window)
-
-    def forward(self, x, te=None):
-
-        if self.decomposition:
-            res_init, trend_init = self.decomp_module(x)
-            res_init, trend_init = res_init.permute(0, 2, 1), trend_init.permute(0, 2, 1)
-            if te is not None:
-                te = te.permute(0, 2, 1)
-            res = self.model_res(res_init, te)
-            trend = self.model_trend(trend_init, te)
-            x = res + trend
-            x = x.permute(0, 2, 1)
-        else:
-            x = x.permute(0, 2, 1)
-            if te is not None:
-                te = te.permute(0, 2, 1)
-            x = self.model(x, te)
-            x = x.permute(0, 2, 1)
-        return x
