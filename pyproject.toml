@@ -29,7 +29,7 @@ dependencies = [
     "orjson==3.9.0",
     "einops>=0.6.1",
     "pydantic==1.10.8",
-    "transformers==4.48.0",
+    "transformers==4.50.0",
     "linear-attention-transformer==0.19.1",
     "tensorboardx==2.6.2",
     "pyarrow==11.0.0",

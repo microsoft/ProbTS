@@ -7,6 +7,8 @@
 
 ## News :tada:
 
+:triangular_flag_on_post: **May 2025**: We have integrated [ModernTCN](https://github.com/luodhhh/ModernTCN/tree/main) into ProbTS. You can find the corresponding configuration file [here](./config/default/moderntcn.yaml).
+
 :triangular_flag_on_post: **Apr 2025**: ProbTS now includes [Time-MoE](https://github.com/Time-MoE/Time-MoE) and offers improved support for foundation models of varying sizes. See [Foundation Models](#foundation-models) for details.
 
 :triangular_flag_on_post: **Dec 2024**: ProbTS now supports [GIFT-EVAL](https://github.com/SalesforceAIResearch/gift-eval?tab=readme-ov-file#installation) benchmark datasets! Visit [this page](./docs/documentation/Gift_eval.md) for detailed instructions. *Please note that this feature is still in beta version and may contain bugs or inconsistencies. We will continue to update and improve it.*
