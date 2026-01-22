@@ -26,7 +26,7 @@ dependencies = [
     "gluonts~=0.15.1",
     "typeshed-client==2.3.0",
     "docstring-parser==0.15",
-    "orjson==3.9.0",
+    "orjson==3.11.5",
     "einops>=0.6.1",
     "pydantic==1.10.8",
     "transformers==4.50.0",
